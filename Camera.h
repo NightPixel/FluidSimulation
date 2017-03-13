@@ -36,6 +36,10 @@ private:
     // Radius is the radius of the sphere around the target on which the camera is located.
     float radius = 5.0f;
 
+    // The y-component of the world up vector. Usually, the up vector is (0, 1, 0),
+    // but when the camera is upside down, we flip it to (0, -1, 0) so camera movement works correctly.
+    float up = 1.0f;
+
     // Target is a position in world coordinates; the camera looks at this position.
     glm::vec3 target;
 };
