@@ -5,8 +5,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-Program::Program()
+Program::Program(GLFWwindow* window)
+    : window(window)
 {
+    glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
+
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
@@ -65,16 +68,12 @@ Program::Program()
     glEnableVertexAttribArray(posAttrib);
     glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    uniModel = glGetUniformLocation(shaderProgram, "model");
+    // Set up model, view, projection matrices
+    glm::mat4 model{}; // Identity matrix
+    GLint uniModel = glGetUniformLocation(shaderProgram, "model");
+    glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
-    // Set up projection
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(3.5f, 3.5f, 2.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    GLint uniView = glGetUniformLocation(shaderProgram, "view");
-    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+    uniView = glGetUniformLocation(shaderProgram, "view");
 
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 1.0f, 10.0f);
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
@@ -95,15 +94,8 @@ Program::~Program()
 // The dt parameter is the elapsed frame time since last frame, in ms.
 void Program::update(float dt)
 {
-    // Rotate cube
-    rotationAngle += 0.01f * dt * glm::radians(15.0f);
-    glm::mat4 model;
-    model = glm::rotate(
-        model,
-        rotationAngle,
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+    glm::mat4 view = camera.getViewMatrix();
+    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
     // Randomize vertices
     for (auto& vert : vertices)
@@ -116,4 +108,34 @@ void Program::update(float dt)
 
     // Draw cube
     glDrawArrays(GL_POINTS, 0, cubeSize * cubeSize * cubeSize);
+}
+
+// Called when the mouse cursor is moved.
+void Program::onMouseMoved(float dxPos, float dyPos)
+{
+    const bool leftMouseButtonPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    const bool rightMouseButtonPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+
+    if (leftMouseButtonPressed == rightMouseButtonPressed)
+        return; // Neither is pressed, or both are pressed
+
+    if (leftMouseButtonPressed)
+    {
+        float dTheta = -dxPos / (0.5f * windowSizeX);
+        float dPhi   = -dyPos / (0.5f * windowSizeY);
+        camera.rotate(dTheta, dPhi);
+    }
+    if (rightMouseButtonPressed)
+    {
+        float dx =  2.0f * dxPos / (0.5f * windowSizeX);
+        float dy = -2.0f * dyPos / (0.5f * windowSizeY);
+        camera.pan(dx, dy);
+    }
+
+}
+
+// Called when the mouse wheel is scrolled.
+void Program::onMouseScrolled(float yOffset)
+{
+    camera.zoom(yOffset / 30.0f);
 }
