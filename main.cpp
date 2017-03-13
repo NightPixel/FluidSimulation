@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <cstdio>
+#include <chrono>
+#include "Program.h"
 
 int main()
 {
@@ -18,15 +19,24 @@ int main()
     glewExperimental = GL_TRUE;
     glewInit();
 
+    Program fluidSimulationProgram;
+
+    auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, GL_TRUE);
 
-        GLuint vertexBuffer;
-        glGenBuffers(1, &vertexBuffer);
+        // Clear the screen to black
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        printf("%u\n", vertexBuffer);
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float, std::milli> dt = currentTime - previousTime;
+
+        fluidSimulationProgram.update(dt.count());
+
+        previousTime = currentTime;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
