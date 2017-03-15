@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Kernels.h" />
     <ClInclude Include="OpenGLUtils.h" />
     <ClInclude Include="Program.h" />
     <ClInclude Include="Randomizer.h" />

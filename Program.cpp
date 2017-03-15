@@ -1,4 +1,5 @@
 #include "Program.h"
+#include "Kernels.h"
 #include "OpenGLUtils.h"
 #include "Randomizer.h"
 #include <glm/glm.hpp>
@@ -18,26 +19,23 @@ Program::Program(GLFWwindow* window)
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    // Create cube vertices
-    for (int z = -cubeSize / 2; z <= cubeSize / 2; ++z)
-        for (int y = -cubeSize / 2; y <= cubeSize / 2; ++y)
-            for (int x = -cubeSize / 2; x <= cubeSize / 2; ++x)
+    // Create cube positions
+    for (int z = 0; z != cubeSize; ++z)
+        for (int y = 0; y != cubeSize; ++y)
+            for (int x = 0; x != cubeSize; ++x)
             {
-                printf("[%i, %i, %i] = (%f, %f, %f)\n",
-                    3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 0,
-                    3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 1,
-                    3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 2,
-                    0.3f * x, 0.3f * y, 0.3f * z);
-                vertices[3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 0] = 0.3f * x;
-                vertices[3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 1] = 0.3f * y;
-                vertices[3 * (cubeSize * cubeSize * (z + cubeSize / 2) + cubeSize * (y + cubeSize / 2) + (x + cubeSize / 2)) + 2] = 0.3f * z;
+                r[z * cubeSize * cubeSize + y * cubeSize + x] =
+                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
+                printf("[%i] = (%f, %f, %f)\n",
+                    z * cubeSize * cubeSize + y * cubeSize + x,
+                    0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
             }
 
     // Create a Vertex Buffer Object and copy the vertex data to it
     glGenBuffers(1, &vbo);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
 
     // Create and compile the vertex shader
     vertexShader = createShaderFromSource("Simple.vert", GL_VERTEX_SHADER);
@@ -66,7 +64,7 @@ Program::Program(GLFWwindow* window)
     // Specify the layout of the vertex data
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
     // Set up model, view, projection matrices
     glm::mat4 model{}; // Identity matrix
@@ -75,7 +73,7 @@ Program::Program(GLFWwindow* window)
 
     uniView = glGetUniformLocation(shaderProgram, "view");
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 1.0f, 10.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 10.0f);
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 }
@@ -94,17 +92,50 @@ Program::~Program()
 // The dt parameter is the elapsed frame time since last frame, in ms.
 void Program::update(float dt)
 {
-    glm::mat4 view = camera.getViewMatrix();
-    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-
-    // Randomize vertices
-    for (auto& vert : vertices)
+    // DEBUG: Randomize positions
+    for (auto& vert : r)
         vert += Randomizer::random(-0.001f, 0.001f);
 
-    // "orphan" vertices array; we no longer need it
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), nullptr, GL_STREAM_DRAW);
+    // Particle densities
+    float rho[particleCount];
+    // Particle pressure
+    float p[particleCount];
+    for (size_t i = 0; i != particleCount; ++i)
+    {
+        rho[i] = getDensity(r[i]);
+        p[i] = getPressure(rho[i]);
+    }
+
+    glm::vec3 forces[particleCount];
+    for (size_t i = 0; i != particleCount; ++i)
+    {
+        glm::vec3 pressureForce;
+        for (size_t j = 0; j != particleCount; ++j)
+            pressureForce += -m * ((p[i] + p[j]) / (2 * rho[j])) * spikyGradient(r[i] - r[j], h);
+        glm::vec3 viscosityForce;
+        for (size_t j = 0; j != particleCount; ++j)
+            viscosityForce += mu * m * ((v[j] - v[i]) / rho[j]) * viscosityLaplacian(r[i] - r[j], h);
+        glm::vec3 surfaceForce;
+            // TODO: calculate surface tension force
+        forces[i] = pressureForce + viscosityForce + surfaceForce;
+    }
+
+    // TODO: add external forces (gravity, user interaction, collisions, ...)
+
+    for (size_t i = 0; i != particleCount; ++i)
+    {
+        glm::vec3 acceleration = forces[i] / rho[i];
+        // TODO: integrate acceleration
+    }
+
+    // "orphan" positions array; we no longer need it
+    glBufferData(GL_ARRAY_BUFFER, sizeof(r), nullptr, GL_STREAM_DRAW);
     // Upload new vertex data
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
+
+    // Update view matrix
+    glm::mat4 view = camera.getViewMatrix();
+    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
     // Draw cube
     glDrawArrays(GL_POINTS, 0, cubeSize * cubeSize * cubeSize);
@@ -138,4 +169,30 @@ void Program::onMouseMoved(float dxPos, float dyPos)
 void Program::onMouseScrolled(float yOffset)
 {
     camera.zoom(yOffset / 30.0f);
+}
+
+// Radius of influence
+const float Program::h = 0.0f;
+// Gas constant
+const float Program::k = 0.0f;
+// Rest density
+const float Program::rho0 = 0.0f;
+// Mass of each particle
+const float Program::m = 0.0f;
+// Fluid viscosity
+const float Program::mu = 0.0f;
+
+// Calculates the density at the given position.
+float Program::getDensity(const glm::vec3& position) const
+{
+    float sum = 0.0f;
+    for (size_t i = 0; i != particleCount; ++i)
+        sum += m * poly6(position - r[i], h);
+    return sum;
+}
+
+// Calculates the pressure for the given density.
+float Program::getPressure(float density) const
+{
+    return k * (density - rho0);
 }

@@ -32,7 +32,31 @@ private:
     int windowSizeX;
     int windowSizeY;
 
-    // vertices, for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
+    /* DEBUG */
+    // positions array, for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 7;
-    GLfloat vertices[cubeSize * cubeSize * cubeSize * 3];
+    static const int particleCount = cubeSize * cubeSize * cubeSize;
+    /* END DEBUG */
+
+    // Radius of influence
+    static const float h;
+    // Gas constant
+    static const float k;
+    // Rest density
+    static const float rho0;
+    // Mass of each particle
+    static const float m;
+    // Fluid viscosity
+    static const float mu;
+
+    // Calculates the density at the given position.
+    float getDensity(const glm::vec3& position) const;
+
+    // Calculates the pressure for the given density.
+    float getPressure(float density) const;
+
+    // Particle positions
+    glm::vec3 r[particleCount];
+    // Particle velocities
+    glm::vec3 v[particleCount];
 };

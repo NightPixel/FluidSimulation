@@ -8,7 +8,7 @@ void cursorPositionCallback(GLFWwindow* window, double xPos, double yPos)
     static double prevXPos;
     static double prevYPos;
 
-    Program* program = (Program*)glfwGetWindowUserPointer(window);
+    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
 
     program->onMouseMoved((float)(xPos - prevXPos), (float)(yPos - prevYPos));
 
@@ -19,7 +19,7 @@ void cursorPositionCallback(GLFWwindow* window, double xPos, double yPos)
 // Callback function called by GLFW when the mouse wheel is scrolled.
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
-    Program* program = (Program*)glfwGetWindowUserPointer(window);
+    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
 
     program->onMouseScrolled((float)yOffset);
 }
@@ -34,7 +34,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Fluid simulation", nullptr, nullptr); // Windowed
+    GLFWwindow* window = glfwCreateWindow(1280, 800, "Fluid simulation", nullptr, nullptr); // Windowed
     glfwMakeContextCurrent(window);
 
     glewExperimental = GL_TRUE;
