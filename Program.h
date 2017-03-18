@@ -33,27 +33,31 @@ private:
     int windowSizeY;
 
     /* DEBUG */
-    // positions array, for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
+    // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 7;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
+    // For now, all particles reside inside a larger cube with these dimensions
+    glm::vec3 minPos = glm::vec3(-2.0f, -2.0f, -2.0f);
+    glm::vec3 maxPos = glm::vec3(2.0f, 2.0f, 2.0f);
     /* END DEBUG */
 
     // Radius of influence
-    static const float h;
+    float h = 1.0f;
     // Gas constant
-    static const float k;
+    float k = 1.0f;
     // Rest density
-    static const float rho0;
+    float rho0 = 1.0f;
     // Mass of each particle
-    static const float m;
+    float m = 1.0f;
     // Fluid viscosity
-    static const float mu;
-
-    // Calculates the density at the given position.
-    float getDensity(const glm::vec3& position) const;
-
-    // Calculates the pressure for the given density.
-    float getPressure(float density) const;
+    float mu = 1.0f;
+    // Surface tension coefficient
+    float sigma = 1.0f;
+    // Surface tension is only evaluated if |n| exceeds this threshold
+    // (where n is the gradient field of the smoothed color field).
+    float csNormThreshold = 1.0f;
+    // Gravity acceleration
+    glm::vec3 gravity = glm::vec3(0.0f, -9.81f, 0.0f);
 
     // Particle positions
     glm::vec3 r[particleCount];

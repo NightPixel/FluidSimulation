@@ -92,40 +92,75 @@ Program::~Program()
 // The dt parameter is the elapsed frame time since last frame, in ms.
 void Program::update(float dt)
 {
-    // DEBUG: Randomize positions
-    for (auto& vert : r)
-        vert += Randomizer::random(-0.001f, 0.001f);
+    /* DEBUG: Randomize positions to test CPU-to-GPU vertex streaming */
+    //for (auto& vert : r)
+    //    vert += Randomizer::random(-0.001f, 0.001f);
+    /* END DEBUG */
 
-    // Particle densities
-    float rho[particleCount];
-    // Particle pressure
-    float p[particleCount];
+    float rho[particleCount] = {}; // Particle densities
+    float p[particleCount] = {}; // Particle pressure
+    // First, calculate density and pressure at each particle position
     for (size_t i = 0; i != particleCount; ++i)
     {
-        rho[i] = getDensity(r[i]);
-        p[i] = getPressure(rho[i]);
+        for (size_t j = 0; j != particleCount; ++j)
+            rho[i] += m * poly6(r[i] - r[j], h);
+        p[i] = k * (rho[i] - rho0);
     }
 
+    // Calculate the force acting on each particle
     glm::vec3 forces[particleCount];
     for (size_t i = 0; i != particleCount; ++i)
     {
         glm::vec3 pressureForce;
         for (size_t j = 0; j != particleCount; ++j)
             pressureForce += -m * ((p[i] + p[j]) / (2 * rho[j])) * spikyGradient(r[i] - r[j], h);
+
         glm::vec3 viscosityForce;
         for (size_t j = 0; j != particleCount; ++j)
             viscosityForce += mu * m * ((v[j] - v[i]) / rho[j]) * viscosityLaplacian(r[i] - r[j], h);
+
         glm::vec3 surfaceForce;
-            // TODO: calculate surface tension force
-        forces[i] = pressureForce + viscosityForce + surfaceForce;
+        glm::vec3 n; // Gradient field of the color field
+        for (size_t j = 0; j != particleCount; ++j)
+            n += m * (1 / rho[j]) * poly6Gradient(r[i] - r[j], h);
+        if (glm::length(n) > csNormThreshold)
+        {
+            float csLaplacian = 0.0f; // Laplacian of the color field
+            for (size_t j = 0; j != particleCount; ++j)
+                csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[i] - r[j], h);
+            surfaceForce = -sigma * csLaplacian * glm::normalize(n);
+        }
+
+        glm::vec3 gravityForce = gravity * rho[i];
+
+        forces[i] = pressureForce + viscosityForce + surfaceForce + gravityForce;
     }
 
-    // TODO: add external forces (gravity, user interaction, collisions, ...)
+    // TODO: add external forces (for example, forces created by user input)
 
+    // Move each particle
     for (size_t i = 0; i != particleCount; ++i)
     {
-        glm::vec3 acceleration = forces[i] / rho[i];
-        // TODO: integrate acceleration
+        glm::vec3 a = forces[i] / rho[i]; // Acceleration
+        // Semi-implicit Euler integration (TODO: better integration?)
+        v[i] += a * dt;
+        r[i] += v[i] * dt;
+
+        // Rudimentary collision; the particles reside inside a hard-coded AABB
+        // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
+        for (int dim = 0; dim != 3; ++dim) // Loop over x, y and z components
+        {
+            if (r[i][dim] < minPos[dim])
+            {
+                r[i][dim] = minPos[dim];
+                v[i][dim] = -v[i][dim];
+            }
+            else if (r[i][dim] > maxPos[dim])
+            {
+                r[i][dim] = maxPos[dim];
+                v[i][dim] = -v[i][dim];
+            }
+        }
     }
 
     // "orphan" positions array; we no longer need it
@@ -169,30 +204,4 @@ void Program::onMouseMoved(float dxPos, float dyPos)
 void Program::onMouseScrolled(float yOffset)
 {
     camera.zoom(yOffset / 30.0f);
-}
-
-// Radius of influence
-const float Program::h = 0.0f;
-// Gas constant
-const float Program::k = 0.0f;
-// Rest density
-const float Program::rho0 = 0.0f;
-// Mass of each particle
-const float Program::m = 0.0f;
-// Fluid viscosity
-const float Program::mu = 0.0f;
-
-// Calculates the density at the given position.
-float Program::getDensity(const glm::vec3& position) const
-{
-    float sum = 0.0f;
-    for (size_t i = 0; i != particleCount; ++i)
-        sum += m * poly6(position - r[i], h);
-    return sum;
-}
-
-// Calculates the pressure for the given density.
-float Program::getPressure(float density) const
-{
-    return k * (density - rho0);
 }
