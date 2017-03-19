@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <vector>
 
 class Program
 {
@@ -63,4 +64,12 @@ private:
     glm::vec3 r[particleCount];
     // Particle velocities
     glm::vec3 v[particleCount];
+
+    // Particle grid data structure: changes O(n^2) to O(nm): we don't have to check all other particles, but
+    // only particles in adjacent grid cells.
+    // Possible TODO: Store entire particle data for better cache usage
+    // Possible TODO: Particle grid sizes are 4.0f / 1.0f: make this dependent on actual h and minPos/maxPos with dyn alloc (slow?)
+    std::vector<int> particleGrid[4][4][4];
+
+    void fillParticleGrid();
 };

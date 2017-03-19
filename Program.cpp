@@ -97,6 +97,8 @@ void Program::update(float dt)
     //    vert += Randomizer::random(-0.001f, 0.001f);
     /* END DEBUG */
 
+    fillParticleGrid();
+
     float rho[particleCount] = {}; // Particle densities
     float p[particleCount] = {}; // Particle pressure
     // First, calculate density and pressure at each particle position
@@ -204,4 +206,26 @@ void Program::onMouseMoved(float dxPos, float dyPos)
 void Program::onMouseScrolled(float yOffset)
 {
     camera.zoom(yOffset / 30.0f);
+}
+
+void Program::fillParticleGrid()
+{
+    // Possible TODO: don't use vectors for fast clearing using memset
+    // However, a fixed size could possibly cost a lot of memory for larger grids
+    for(size_t x = 0; x != 4; ++x)
+        for (size_t y = 0; y != 4; ++y)
+            for (size_t z = 0; z != 4; ++z)
+            {
+                particleGrid[x][y][z].clear();
+            }
+    
+
+    for (size_t i = 0; i != particleCount; ++i)
+    {
+        glm::vec3 pos = r[i];
+        
+        // Make sure values exactly at grid edge don't lead to incorrect array slot
+        const float epsilon = 1e-6;
+        particleGrid[(int)(pos.x + 2.0f - epsilon)][(int)(pos.y + 2.0f - epsilon)][(int)(pos.z + 2.0f - epsilon)].push_back(i);
+    }
 }
