@@ -74,7 +74,7 @@ Program::Program(GLFWwindow* window)
 
     uniView = glGetUniformLocation(shaderProgram, "view");
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 10.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f);
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 }
