@@ -104,8 +104,7 @@ void Program::update(float dt)
     // First, calculate density and pressure at each particle position
     for (size_t i = 0; i != particleCount; ++i)
     {
-        for (size_t j = 0; j != particleCount; ++j)
-            rho[i] += m * poly6(r[i] - r[j], h);
+        calcDensity(i, rho[i]);
         p[i] = k * (rho[i] - rho0);
     }
 
@@ -113,25 +112,11 @@ void Program::update(float dt)
     glm::vec3 forces[particleCount];
     for (size_t i = 0; i != particleCount; ++i)
     {
-        glm::vec3 pressureForce;
-        for (size_t j = 0; j != particleCount; ++j)
-            pressureForce += -m * ((p[i] + p[j]) / (2 * rho[j])) * spikyGradient(r[i] - r[j], h);
+        glm::vec3 pressureForce = calcPressureForce(i, rho, p);
 
-        glm::vec3 viscosityForce;
-        for (size_t j = 0; j != particleCount; ++j)
-            viscosityForce += mu * m * ((v[j] - v[i]) / rho[j]) * viscosityLaplacian(r[i] - r[j], h);
+        glm::vec3 viscosityForce = calcViscosityForce(i, rho);
 
-        glm::vec3 surfaceForce;
-        glm::vec3 n; // Gradient field of the color field
-        for (size_t j = 0; j != particleCount; ++j)
-            n += m * (1 / rho[j]) * poly6Gradient(r[i] - r[j], h);
-        if (glm::length(n) > csNormThreshold)
-        {
-            float csLaplacian = 0.0f; // Laplacian of the color field
-            for (size_t j = 0; j != particleCount; ++j)
-                csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[i] - r[j], h);
-            surfaceForce = -sigma * csLaplacian * glm::normalize(n);
-        }
+        glm::vec3 surfaceForce = calcSurfaceForce(i, rho);
 
         glm::vec3 gravityForce = gravity * rho[i];
 
@@ -228,4 +213,44 @@ void Program::fillParticleGrid()
         const float epsilon = 1e-6;
         particleGrid[(int)(pos.x + 2.0f - epsilon)][(int)(pos.y + 2.0f - epsilon)][(int)(pos.z + 2.0f - epsilon)].push_back(i);
     }
+}
+
+glm::vec3 Program::calcPressureForce(int particleId, float* rho, float* p)
+{
+    glm::vec3 pressureForce;
+    for (size_t j = 0; j != particleCount; ++j)
+        pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
+    return pressureForce;
+}
+
+glm::vec3 Program::calcViscosityForce(int particleId, float* rho)
+{
+    glm::vec3 viscosityForce;
+    for (size_t j = 0; j != particleCount; ++j)
+        viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
+
+    return viscosityForce;
+}
+
+glm::vec3 Program::calcSurfaceForce(int particleId, float* rho)
+{
+    glm::vec3 surfaceForce;
+    glm::vec3 n; // Gradient field of the color field
+    for (size_t j = 0; j != particleCount; ++j)
+        n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
+    if (glm::length(n) > csNormThreshold)
+    {
+        float csLaplacian = 0.0f; // Laplacian of the color field
+        for (size_t j = 0; j != particleCount; ++j)
+            csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
+        surfaceForce = -sigma * csLaplacian * glm::normalize(n);
+    }
+
+    return surfaceForce;
+}
+
+void Program::calcDensity(int particleId, float& rho)
+{
+    for (size_t j = 0; j != particleCount; ++j)
+        rho += m * poly6(r[particleId] - r[j], h);
 }

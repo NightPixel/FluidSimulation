@@ -72,4 +72,10 @@ private:
     std::vector<int> particleGrid[4][4][4];
 
     void fillParticleGrid();
+
+    glm::vec3 calcPressureForce(int particleId, float* rho, float* p);
+    glm::vec3 calcViscosityForce(int particleId, float* rho);
+    glm::vec3 calcSurfaceForce(int particleId, float* rho);
+
+    void calcDensity(int particleId, float& rho);
 };
