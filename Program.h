@@ -78,4 +78,9 @@ private:
     glm::vec3 calcSurfaceForce(int particleId, float* rho);
 
     void calcDensity(int particleId, float& rho);
+
+    void getAdjacentCells(int gridX, int gridY, int gridZ,
+        int& minXOut, int& maxXOut,
+        int& minYOut, int& maxYOut,
+        int& minZOut, int& maxZOut);
 };
