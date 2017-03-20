@@ -43,17 +43,17 @@ private:
     /* END DEBUG */
 
     // Radius of influence
-    float h = 1.0f;
+    float h = 0.5f;
     // Gas constant
-    float k = 1.0f;
+    float k = 3.0f;
     // Rest density
-    float rho0 = 1.0f;
+    float rho0 = 1000.0f;
     // Mass of each particle
     float m = 1.0f;
     // Fluid viscosity
-    float mu = 1.0f;
+    float mu = 3.0f;
     // Surface tension coefficient
-    float sigma = 1.0f;
+    float sigma = 0.01f;
     // Surface tension is only evaluated if |n| exceeds this threshold
     // (where n is the gradient field of the smoothed color field).
     float csNormThreshold = 1.0f;
