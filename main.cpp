@@ -91,7 +91,10 @@ int main()
 
         double currentTime = glfwGetTime();
         if (currentTime - previousTime > fluidSimulationProgram.dt)
+        {
             fluidSimulationProgram.update();
+            previousTime = currentTime;
+        }
         fluidSimulationProgram.draw();
 
         // Draw AntTweakBar
