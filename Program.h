@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <AntTweakBar.h>
 #include <vector>
 
 class Program
@@ -12,7 +13,7 @@ public:
     ~Program();
 
     // Updates the state of the program, and draws a new frame.
-    // The dt parameter is the elapsed frame time since last frame, in ms.
+    // The dt parameter is the elapsed frame time since last frame, in seconds.
     void update(float dt);
 
     // Called when the mouse cursor is moved.
@@ -23,6 +24,7 @@ public:
 private:
     Camera camera;
     GLFWwindow* window;
+    TwBar* antTweakBar;
 
     GLuint vao;
     GLuint vbo;
@@ -51,14 +53,14 @@ private:
     // Mass of each particle
     float m = 1.0f;
     // Fluid viscosity
-    float mu = 3.0f; // 3.0f
+    float mu = 3.0f;
     // Surface tension coefficient
-    float sigma = 0.01f; // 0.01f
+    float sigma = 0.01f;
     // Surface tension is only evaluated if |n| exceeds this threshold
     // (where n is the gradient field of the smoothed color field).
     float csNormThreshold = 1.0f;
     // Gravity acceleration
-    glm::vec3 gravity = glm::vec3(0.0f, -9.81f, 0.0f);
+    glm::vec3 gravity = glm::vec3(0.0f, -10.0f, 0.0f);
 
     // Particle positions
     glm::vec3 r[particleCount];
@@ -69,15 +71,15 @@ private:
     // only particles in adjacent grid cells.
     // Possible TODO: Store entire particle data for better cache usage
     // Possible TODO: Particle grid sizes are 4.0f / 1.0f: make this dependent on actual h and minPos/maxPos with dyn alloc (slow?)
-    std::vector<int> particleGrid[4][4][4];
+    std::vector<size_t> particleGrid[4][4][4];
 
     void fillParticleGrid();
 
-    glm::vec3 calcPressureForce(int particleId, float* rho, float* p);
-    glm::vec3 calcViscosityForce(int particleId, float* rho);
-    glm::vec3 calcSurfaceForce(int particleId, float* rho);
+    glm::vec3 calcPressureForce(size_t particleId, float* rho, float* p);
+    glm::vec3 calcViscosityForce(size_t particleId, float* rho);
+    glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
-    void calcDensity(int particleId, float& rho);
+    void calcDensity(size_t particleId, float& rho);
 
     void getAdjacentCells(int gridX, int gridY, int gridZ,
         int& minXOut, int& maxXOut,

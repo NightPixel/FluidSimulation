@@ -1,4 +1,4 @@
-#include "Program.h"
+﻿#include "Program.h"
 #include "Kernels.h"
 #include "OpenGLUtils.h"
 #include "Randomizer.h"
@@ -11,6 +11,16 @@ Program::Program(GLFWwindow* window)
     : window(window)
 {
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
+    antTweakBar = TwNewBar("Simulation settings");
+    TwDefine("GLOBAL fontsize=3");
+    TwAddVarRW(antTweakBar, "h",               TW_TYPE_FLOAT, &h,               "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "k",               TW_TYPE_FLOAT, &k,               "min=100      max=3000     step=100    ");
+    TwAddVarRW(antTweakBar, "rho0",            TW_TYPE_FLOAT, &rho0,            "min=  1      max=  50     step=  1    ");
+    TwAddVarRW(antTweakBar, "m",               TW_TYPE_FLOAT, &m,               "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "mu",              TW_TYPE_FLOAT, &mu,              "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "sigma",           TW_TYPE_FLOAT, &sigma,           "min=  0.001  max=   0.05  step=  0.001");
+    TwAddVarRW(antTweakBar, "csNormThresh.",   TW_TYPE_FLOAT, &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "gravityY",        TW_TYPE_FLOAT, &gravity.y,       "min=-50      max=  -1     step=  1    ");
 
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
@@ -90,10 +100,11 @@ Program::~Program()
 }
 
 // Updates the state of the program, and draws a new frame.
-// The dt parameter is the elapsed frame time since last frame, in ms.
+// The dt parameter is the elapsed frame time since last frame, in seconds.
 void Program::update(float dt)
 {
-    dt = 0.01;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    dt = 0.01f;
     /* DEBUG: Randomize positions to test CPU-to-GPU vertex streaming */
     //for (auto& vert : r)
     //    vert += Randomizer::random(-0.001f, 0.001f);
@@ -218,7 +229,7 @@ void Program::fillParticleGrid()
     }
 }
 
-glm::vec3 Program::calcPressureForce(int particleId, float* rho, float* p)
+glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
 {
     glm::vec3 pressureForce;
 #ifndef USEPARTICLEGRID
@@ -232,7 +243,7 @@ glm::vec3 Program::calcPressureForce(int particleId, float* rho, float* p)
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (int j : particleGrid[x][y][z])
+        for (size_t j : particleGrid[x][y][z])
         {
             pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
             
@@ -248,12 +259,12 @@ glm::vec3 Program::calcPressureForce(int particleId, float* rho, float* p)
     return pressureForce;
 }
 
-glm::vec3 Program::calcViscosityForce(int particleId, float* rho)
+glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
 {
     glm::vec3 viscosityForce;
 #ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
-        viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacianr[particleId] - r[j], h);
+        viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #else
     glm::vec3 pos = r[particleId];
     int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
@@ -262,14 +273,14 @@ glm::vec3 Program::calcViscosityForce(int particleId, float* rho)
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (int j : particleGrid[x][y][z])
+        for (size_t j : particleGrid[x][y][z])
             viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #endif
 
     return viscosityForce;
 }
 
-glm::vec3 Program::calcSurfaceForce(int particleId, float* rho)
+glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
 {
     glm::vec3 surfaceForce;
     glm::vec3 n; // Gradient field of the color field
@@ -285,7 +296,7 @@ glm::vec3 Program::calcSurfaceForce(int particleId, float* rho)
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (int j : particleGrid[x][y][z])
+        for (size_t j : particleGrid[x][y][z])
         {
             n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
         }
@@ -300,9 +311,8 @@ glm::vec3 Program::calcSurfaceForce(int particleId, float* rho)
             csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
 #else
         for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-            for (std::vector<int>::iterator it = particleGrid[x][y][z].begin(); it != particleGrid[x][y][z].end(); ++it)
+            for (size_t j : particleGrid[x][y][z])
             {
-                int j = *it;
                 csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
             }
 #endif
@@ -312,7 +322,7 @@ glm::vec3 Program::calcSurfaceForce(int particleId, float* rho)
     return surfaceForce;
 }
 
-void Program::calcDensity(int particleId, float& rho)
+void Program::calcDensity(size_t particleId, float& rho)
 {
     for (size_t j = 0; j != particleCount; ++j)
         rho += m * poly6(r[particleId] - r[j], h);
