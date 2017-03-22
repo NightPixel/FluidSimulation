@@ -6,20 +6,34 @@
 #include <AntTweakBar.h>
 #include <vector>
 
+// Callback function called by AntTweakBar when the single-step button is clicked.
+void TW_CALL stepButtonCallback(void* clientData);
+
+// Callback function called by AntTweakBar when the particle reset button is clicked.
+void TW_CALL particleResetButtonCallback(void* clientData);
+
 class Program
 {
 public:
     Program(GLFWwindow* window);
     ~Program();
 
-    // Updates the state of the program, and draws a new frame.
-    // The dt parameter is the elapsed frame time since last frame, in seconds.
-    void update(float dt);
+    // Updates the state of the program.
+    void update();
+    // Draws a new frame.
+    void draw() const;
+    // Resets all particles to their initial position, with zero velocity.
+    void resetParticles();
 
     // Called when the mouse cursor is moved.
     void onMouseMoved(float dxPos, float dyPos);
     // Called when the mouse wheel is scrolled.
     void onMouseScrolled(float yOffset);
+
+    // Delta time step; the simulation advances exactly dt seconds every update() call. 
+    float dt = 0.01f;
+    // Is the simulation paused?
+    bool paused = true;
 
 private:
     Camera camera;
@@ -65,7 +79,7 @@ private:
     // Particle positions
     glm::vec3 r[particleCount];
     // Particle velocities
-    glm::vec3 v[particleCount];
+    glm::vec3 v[particleCount] = {};
 
     // Particle grid data structure: changes O(n^2) to O(nm): we don't have to check all other particles, but
     // only particles in adjacent grid cells.

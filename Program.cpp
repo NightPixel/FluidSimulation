@@ -7,20 +7,43 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// Callback function called by AntTweakBar when the single-step button is clicked.
+void TW_CALL stepButtonCallback(void* clientData)
+{
+    Program* program = static_cast<Program*>(clientData);
+
+    program->paused = false;
+    program->update();
+    program->paused = true;
+}
+
+// Callback function called by AntTweakBar when the particle reset button is clicked.
+void TW_CALL particleResetButtonCallback(void* clientData)
+{
+    Program* program = static_cast<Program*>(clientData);
+
+    program->resetParticles();
+    program->paused = true;
+}
+
 Program::Program(GLFWwindow* window)
     : window(window)
 {
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
     antTweakBar = TwNewBar("Simulation settings");
     TwDefine("GLOBAL fontsize=3");
-    TwAddVarRW(antTweakBar, "h",               TW_TYPE_FLOAT, &h,               "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "k",               TW_TYPE_FLOAT, &k,               "min=100      max=3000     step=100    ");
-    TwAddVarRW(antTweakBar, "rho0",            TW_TYPE_FLOAT, &rho0,            "min=  1      max=  50     step=  1    ");
-    TwAddVarRW(antTweakBar, "m",               TW_TYPE_FLOAT, &m,               "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "mu",              TW_TYPE_FLOAT, &mu,              "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "sigma",           TW_TYPE_FLOAT, &sigma,           "min=  0.001  max=   0.05  step=  0.001");
-    TwAddVarRW(antTweakBar, "csNormThresh.",   TW_TYPE_FLOAT, &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "gravityY",        TW_TYPE_FLOAT, &gravity.y,       "min=-50      max=  -1     step=  1    ");
+    TwAddVarRW(antTweakBar, "h",             TW_TYPE_FLOAT,   &h,               "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "k",             TW_TYPE_FLOAT,   &k,               "min=100      max=3000     step=100    ");
+    TwAddVarRW(antTweakBar, "rho0",          TW_TYPE_FLOAT,   &rho0,            "min=  1      max=  50     step=  1    ");
+    TwAddVarRW(antTweakBar, "m",             TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "mu",            TW_TYPE_FLOAT,   &mu,              "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "sigma",         TW_TYPE_FLOAT,   &sigma,           "min=  0.001  max=   0.05  step=  0.001");
+    TwAddVarRW(antTweakBar, "csNormThresh.", TW_TYPE_FLOAT,   &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "gravityY",      TW_TYPE_FLOAT,   &gravity.y,       "min=-50      max=  -1     step=  1    ");
+    TwAddVarRW(antTweakBar, "dt",            TW_TYPE_FLOAT,   &dt,              "min=  0.001  max=   0.05  step=  0.001");
+    TwAddVarRW(antTweakBar, "Paused",        TW_TYPE_BOOLCPP, &paused,          "");
+    TwAddButton(antTweakBar, "Single step", stepButtonCallback, this, "");
+    TwAddButton(antTweakBar, "Reset particles", particleResetButtonCallback, this, "");
 
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
@@ -31,16 +54,7 @@ Program::Program(GLFWwindow* window)
     glBindVertexArray(vao);
 
     // Create cube positions
-    for (int z = 0; z != cubeSize; ++z)
-        for (int y = 0; y != cubeSize; ++y)
-            for (int x = 0; x != cubeSize; ++x)
-            {
-                r[z * cubeSize * cubeSize + y * cubeSize + x] =
-                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
-                printf("[%i] = (%f, %f, %f)\n",
-                    z * cubeSize * cubeSize + y * cubeSize + x,
-                    0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
-            }
+    resetParticles();
 
     // Create a Vertex Buffer Object and copy the vertex data to it
     glGenBuffers(1, &vbo);
@@ -99,12 +113,11 @@ Program::~Program()
     glDeleteVertexArrays(1, &vao);
 }
 
-// Updates the state of the program, and draws a new frame.
-// The dt parameter is the elapsed frame time since last frame, in seconds.
-void Program::update(float dt)
+// Updates the state of the program.
+void Program::update()
 {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    dt = 0.01f;
+    if (paused)
+        return;
     /* DEBUG: Randomize positions to test CPU-to-GPU vertex streaming */
     //for (auto& vert : r)
     //    vert += Randomizer::random(-0.001f, 0.001f);
@@ -165,6 +178,14 @@ void Program::update(float dt)
         }
     }
 
+}
+
+// Draws a new frame.
+void Program::draw() const
+{
+    // Re-bind vertex buffer; AntTweakBar changed it.
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
     // "orphan" positions array; we no longer need it
     glBufferData(GL_ARRAY_BUFFER, sizeof(r), nullptr, GL_STREAM_DRAW);
     // Upload new vertex data
@@ -176,6 +197,24 @@ void Program::update(float dt)
 
     // Draw cube
     glDrawArrays(GL_POINTS, 0, cubeSize * cubeSize * cubeSize);
+}
+
+void Program::resetParticles()
+{
+    // Create cube positions
+    for (int z = 0; z != cubeSize; ++z)
+        for (int y = 0; y != cubeSize; ++y)
+            for (int x = 0; x != cubeSize; ++x)
+            {
+                r[z * cubeSize * cubeSize + y * cubeSize + x] =
+                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
+                printf("[%i] = (%f, %f, %f)\n",
+                    z * cubeSize * cubeSize + y * cubeSize + x,
+                    0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
+            }
+
+    for (auto& vel : v)
+        vel = glm::vec3{};
 }
 
 // Called when the mouse cursor is moved.

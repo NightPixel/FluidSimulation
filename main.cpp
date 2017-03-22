@@ -1,8 +1,8 @@
+#include "Program.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
 #include <AntTweakBar_GLFW3.h>
-#include "Program.h"
 
 // Callback function called by GLFW when the cursor position changes.
 void cursorPositionCallback(GLFWwindow* window, double xPos, double yPos)
@@ -79,7 +79,7 @@ int main()
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCharCallback(window, charCallback);
 
-    auto previousTime = glfwGetTime();
+    double previousTime = glfwGetTime();
     while (!glfwWindowShouldClose(window))
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -89,9 +89,10 @@ int main()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        auto currentTime = glfwGetTime();
-        fluidSimulationProgram.update((float)(currentTime - previousTime));
-        previousTime = currentTime;
+        double currentTime = glfwGetTime();
+        if (currentTime - previousTime > fluidSimulationProgram.dt)
+            fluidSimulationProgram.update();
+        fluidSimulationProgram.draw();
 
         // Draw AntTweakBar
         TwDraw();
