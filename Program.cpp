@@ -28,6 +28,8 @@ void TW_CALL particleResetButtonCallback(void* clientData)
 
 Program::Program(GLFWwindow* window)
     : window(window)
+    , voxelVolume(PolyVox::Region(worldPosToVoxelIndex(minPos), worldPosToVoxelIndex(maxPos)))
+    , surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
     antTweakBar = TwNewBar("Simulation settings");
@@ -56,11 +58,17 @@ Program::Program(GLFWwindow* window)
     // Create cube positions
     resetParticles();
 
-    // Create a Vertex Buffer Object and copy the vertex data to it
+    // Create a Vertex Buffer Object
     glGenBuffers(1, &vbo);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+#ifdef DRAWPOINTS
+    // Copy the vertex data
     glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
+#endif
+
+    // Create an Element Buffer Object
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
     // Create and compile the vertex shader
     vertexShader = createShaderFromSource("Simple.vert", GL_VERTEX_SHADER);
@@ -87,9 +95,25 @@ Program::Program(GLFWwindow* window)
     glUseProgram(shaderProgram);
 
     // Specify the layout of the vertex data
+#ifdef DRAWPOINTS
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0 * sizeof(float)));
+#else
+    // PolyVox::PositionMaterialNormal layout:
+    //    (x, y, z)-position (3 floats)
+    //    (x, y, z)-normal   (3 floats)
+    //    material           (1 float)
+    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+    glEnableVertexAttribArray(posAttrib);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+    GLint normAttrib = glGetAttribLocation(shaderProgram, "normal");
+    glEnableVertexAttribArray(normAttrib);
+    glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+    GLint matAttrib = glGetAttribLocation(shaderProgram, "material");
+    glEnableVertexAttribArray(matAttrib);
+    glVertexAttribPointer(matAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+#endif
 
     // Set up model, view, projection matrices
     glm::mat4 model{}; // Identity matrix
@@ -109,6 +133,7 @@ Program::~Program()
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
 
+    glDeleteBuffers(1, &ebo);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
 }
@@ -132,7 +157,7 @@ void Program::update()
     // First, calculate density and pressure at each particle position
     for (size_t i = 0; i != particleCount; ++i)
     {
-        calcDensity(i, rho[i]);
+        rho[i] = calcDensity(i);
         p[i] = std::max(0.0f, k * (rho[i] - rho0));
     }
 
@@ -181,22 +206,31 @@ void Program::update()
 }
 
 // Draws a new frame.
-void Program::draw() const
+void Program::draw()
 {
     // Re-bind vertex buffer; AntTweakBar changed it.
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    // "orphan" positions array; we no longer need it
-    glBufferData(GL_ARRAY_BUFFER, sizeof(r), nullptr, GL_STREAM_DRAW);
-    // Upload new vertex data
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
 
     // Update view matrix
     glm::mat4 view = camera.getViewMatrix();
     glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-    // Draw cube
+#ifdef DRAWPOINTS
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
     glDrawArrays(GL_POINTS, 0, cubeSize * cubeSize * cubeSize);
+#else
+    fillVoxelVolume();
+    surfaceExtractor.execute();
+    surfaceMesh.scaleVertices(1.0f / (2.0f * voxelVolumeResolutionScale));
+    const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
+    const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
+
+    // Upload new vertex and index data
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
+
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+#endif
 }
 
 void Program::resetParticles()
@@ -361,10 +395,20 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
     return surfaceForce;
 }
 
-void Program::calcDensity(size_t particleId, float& rho)
+float Program::calcDensity(size_t particleId) const
 {
+    float rho = 0.0f;
     for (size_t j = 0; j != particleCount; ++j)
         rho += m * poly6(r[particleId] - r[j], h);
+    return rho;
+}
+
+float Program::calcDensity(const glm::vec3& position) const
+{
+    float rho = 0.0f;
+    for (size_t j = 0; j != particleCount; ++j)
+        rho += m * poly6(position - r[j], h);
+    return rho;
 }
 
 void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int & minXOut, int & maxXOut, int & minYOut, int & maxYOut, int & minZOut, int & maxZOut)
@@ -372,4 +416,34 @@ void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int & minXOut, i
     minXOut = std::max(gridX - 1, 0); maxXOut = std::min(gridX + 1, 3);
     minYOut = std::max(gridY - 1, 0); maxYOut = std::min(gridY + 1, 3);
     minZOut = std::max(gridZ - 1, 0); maxZOut = std::min(gridZ + 1, 3);
+}
+
+PolyVox::Vector3DInt32 Program::worldPosToVoxelIndex(const glm::vec3& worldPos) const
+{
+    return {
+        (int)(worldPos.x * voxelVolumeResolutionScale),
+        (int)(worldPos.y * voxelVolumeResolutionScale),
+        (int)(worldPos.z * voxelVolumeResolutionScale)
+    };
+}
+
+void Program::fillVoxelVolume()
+{
+    const PolyVox::Region volumeRegion = voxelVolume.getEnclosingRegion();
+    const PolyVox::Vector3DInt32& lowerCorner = volumeRegion.getLowerCorner();
+    const PolyVox::Vector3DInt32& upperCorner = volumeRegion.getUpperCorner();
+
+    for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
+        for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
+            for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
+                voxelVolume.setVoxelAt(x, y, z, calcDensity({ x, y, z }));
+
+    /* DEBUG: Only fill voxels that contain an actual particle */
+    /*for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
+        for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
+            for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
+                voxelVolume.setVoxelAt(x, y, z, 0);
+    for (const auto& pos : r)
+        voxelVolume.setVoxelAt(worldPosToVoxelIndex(pos), 100.0f);
+    /* END DEBUG */
 }

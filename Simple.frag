@@ -1,6 +1,8 @@
 #version 150
 
 in vec3 Color;
+in vec3 Normal;
+in float Material;
 
 out vec4 outColor;
 

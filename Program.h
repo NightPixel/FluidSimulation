@@ -4,6 +4,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
+#include <PolyVoxCore/MarchingCubesSurfaceExtractor.h>
+#include <PolyVoxCore/SurfaceMesh.h>
+#include <PolyVoxCore/SimpleVolume.h>
 #include <vector>
 
 // Callback function called by AntTweakBar when the single-step button is clicked.
@@ -11,6 +14,14 @@ void TW_CALL stepButtonCallback(void* clientData);
 
 // Callback function called by AntTweakBar when the particle reset button is clicked.
 void TW_CALL particleResetButtonCallback(void* clientData);
+
+// Returns the density value above which a voxel is considered solid.
+// Template specialization of PolyVox::DefaultMarchingCubesController<float>::getThreshold()
+template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
+    PolyVox::DefaultMarchingCubesController<float>::getThreshold()
+{
+    return 10.0f;
+}
 
 class Program
 {
@@ -21,7 +32,7 @@ public:
     // Updates the state of the program.
     void update();
     // Draws a new frame.
-    void draw() const;
+    void draw();
     // Resets all particles to their initial position, with zero velocity.
     void resetParticles();
 
@@ -42,6 +53,7 @@ private:
 
     GLuint vao;
     GLuint vbo;
+    GLuint ebo;
     GLuint vertexShader;
     GLuint fragmentShader;
     GLuint shaderProgram;
@@ -57,6 +69,14 @@ private:
     glm::vec3 minPos = glm::vec3(-2.0f, -2.0f, -2.0f);
     glm::vec3 maxPos = glm::vec3(2.0f, 2.0f, 2.0f);
     /* END DEBUG */
+
+    // World positions will be multiplied by this scale for the purposes of voxel indexing.
+    // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
+    // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
+    float voxelVolumeResolutionScale = 3.0f;
+    PolyVox::SimpleVolume<float> voxelVolume;
+    PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal> surfaceMesh;
+    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor;
 
     // Radius of influence
     float h = 0.5f;
@@ -93,10 +113,14 @@ private:
     glm::vec3 calcViscosityForce(size_t particleId, float* rho);
     glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
-    void calcDensity(size_t particleId, float& rho);
+    float calcDensity(size_t particleId) const;
+    float calcDensity(const glm::vec3& position) const;
 
     void getAdjacentCells(int gridX, int gridY, int gridZ,
         int& minXOut, int& maxXOut,
         int& minYOut, int& maxYOut,
         int& minZOut, int& maxZOut);
+
+    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
+    void fillVoxelVolume();
 };
