@@ -6,9 +6,24 @@ in float Material;
 
 out vec4 outColor;
 
+uniform vec3 minWorldPos;
+uniform vec3 maxWorldPos;
+
+float invLerp(float lower, float upper, float value)
+{
+    return (value - lower) / (upper - lower);
+}
+
+vec3 invLerp(vec3 lower, vec3 upper, vec3 value)
+{
+    return vec3(
+        invLerp(lower.x, upper.x, value.x),
+        invLerp(lower.y, upper.y, value.y),
+        invLerp(lower.z, upper.z, value.z)
+    );
+}
+
 void main()
 {
-    vec3 pixelColor = Color + vec3(2.0, 2.0, 2.0);
-    pixelColor /= 4;
-    outColor = vec4(pixelColor, 1.0);
+    outColor = vec4(invLerp(minWorldPos, maxWorldPos, Color), 1.0);
 }

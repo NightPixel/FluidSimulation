@@ -126,6 +126,12 @@ Program::Program(GLFWwindow* window)
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f);
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+    
+    // Set up fragment shader color uniforms
+    GLint uniMinWorldPos = glGetUniformLocation(shaderProgram, "minWorldPos");
+    glUniform3fv(uniMinWorldPos, 1, glm::value_ptr(minPos));
+    GLint uniMaxWorldPos = glGetUniformLocation(shaderProgram, "maxWorldPos");
+    glUniform3fv(uniMaxWorldPos, 1, glm::value_ptr(maxPos));
 
     // Create cube positions
     resetParticles();
@@ -221,7 +227,7 @@ void Program::draw()
     // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
     fillVoxelVolume();
     surfaceExtractor.execute();
-    surfaceMesh.scaleVertices(1.0f / (2.0f * voxelVolumeResolutionScale));
+    surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
     const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
 
