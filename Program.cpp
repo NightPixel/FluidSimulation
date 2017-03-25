@@ -228,6 +228,7 @@ void Program::draw()
     fillVoxelVolume();
     surfaceExtractor.execute();
     surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
+    surfaceMesh.translateVertices({ minPos.x, minPos.y, minPos.z });
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
     const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
 
