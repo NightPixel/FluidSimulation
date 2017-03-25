@@ -51,9 +51,9 @@ private:
     GLFWwindow* window;
     TwBar* antTweakBar;
 
-    GLuint vao;
-    GLuint vbo;
-    GLuint ebo;
+    GLuint meshVAO, pointsVAO;
+    GLuint meshVBO, pointsVBO;
+    GLuint meshEBO;
     GLuint vertexShader;
     GLuint fragmentShader;
     GLuint shaderProgram;

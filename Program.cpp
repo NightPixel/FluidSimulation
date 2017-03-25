@@ -50,26 +50,7 @@ Program::Program(GLFWwindow* window)
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
-
-    // Create Vertex Array Object
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    // Create cube positions
-    resetParticles();
-
-    // Create a Vertex Buffer Object
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-#ifdef DRAWPOINTS
-    // Copy the vertex data
-    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
-#endif
-
-    // Create an Element Buffer Object
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-
+    
     // Create and compile the vertex shader
     vertexShader = createShaderFromSource("Simple.vert", GL_VERTEX_SHADER);
     auto shaderInfo = checkShaderCompilation(vertexShader);
@@ -94,26 +75,46 @@ Program::Program(GLFWwindow* window)
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
 
-    // Specify the layout of the vertex data
-#ifdef DRAWPOINTS
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0 * sizeof(float)));
-#else
+    // Create a Vertex Array Object for the surface mesh
+    glGenVertexArrays(1, &meshVAO);
+    glBindVertexArray(meshVAO);
+    // Create a Vertex Buffer Object for the surface mesh
+    glGenBuffers(1, &meshVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    // Create an Element Buffer Object for the surface mesh
+    glGenBuffers(1, &meshEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEBO);
+
+    // Specify the layout of the surface mesh vertex data
     // PolyVox::PositionMaterialNormal layout:
     //    (x, y, z)-position (3 floats)
     //    (x, y, z)-normal   (3 floats)
     //    material           (1 float)
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-    GLint normAttrib = glGetAttribLocation(shaderProgram, "normal");
-    glEnableVertexAttribArray(normAttrib);
-    glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-    GLint matAttrib = glGetAttribLocation(shaderProgram, "material");
-    glEnableVertexAttribArray(matAttrib);
-    glVertexAttribPointer(matAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
-#endif
+    GLint meshPosAttrib = glGetAttribLocation(shaderProgram, "position");
+    glEnableVertexAttribArray(meshPosAttrib);
+    glVertexAttribPointer(meshPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+    GLint meshNormAttrib = glGetAttribLocation(shaderProgram, "normal");
+    glEnableVertexAttribArray(meshNormAttrib);
+    glVertexAttribPointer(meshNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+    GLint meshMatAttrib = glGetAttribLocation(shaderProgram, "material");
+    glEnableVertexAttribArray(meshMatAttrib);
+    glVertexAttribPointer(meshMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+
+    // Create a Vertex Array Object for the particle points
+    glGenVertexArrays(1, &pointsVAO);
+    glBindVertexArray(pointsVAO);
+    // Create a Vertex Buffer Object for the particle points
+    glGenBuffers(1, &pointsVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+    // Copy the vertex data
+    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
+
+    // Specify the layout of the particle points vertex data
+    // glm::vec3 layout:
+    //    (x, y, z)-position (3 floats)
+    GLint pointsPosAttrib = glGetAttribLocation(shaderProgram, "position");
+    glEnableVertexAttribArray(pointsPosAttrib);
+    glVertexAttribPointer(pointsPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
 
     // Set up model, view, projection matrices
     glm::mat4 model{}; // Identity matrix
@@ -125,6 +126,9 @@ Program::Program(GLFWwindow* window)
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f);
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+    // Create cube positions
+    resetParticles();
 }
 
 Program::~Program()
@@ -133,9 +137,11 @@ Program::~Program()
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
 
-    glDeleteBuffers(1, &ebo);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &meshEBO);
+    glDeleteBuffers(1, &meshVBO);
+    glDeleteVertexArrays(1, &meshVAO);
+    glDeleteBuffers(1, &pointsVBO);
+    glDeleteVertexArrays(1, &pointsVAO);
 }
 
 // Updates the state of the program.
@@ -208,29 +214,29 @@ void Program::update()
 // Draws a new frame.
 void Program::draw()
 {
-    // Re-bind vertex buffer; AntTweakBar changed it.
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
     // Update view matrix
     glm::mat4 view = camera.getViewMatrix();
     glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-#ifdef DRAWPOINTS
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
-    glDrawArrays(GL_POINTS, 0, cubeSize * cubeSize * cubeSize);
-#else
+    // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
     fillVoxelVolume();
     surfaceExtractor.execute();
     surfaceMesh.scaleVertices(1.0f / (2.0f * voxelVolumeResolutionScale));
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
     const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
 
-    // Upload new vertex and index data
+    // Draw surface mesh
+    glBindVertexArray(meshVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
-
     glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
-#endif
+
+    // Draw points
+    glBindVertexArray(pointsVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
+    glDrawArrays(GL_POINTS, 0, sizeof(r) / sizeof(glm::vec3));
 }
 
 void Program::resetParticles()
@@ -436,7 +442,8 @@ void Program::fillVoxelVolume()
     for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
-                voxelVolume.setVoxelAt(x, y, z, calcDensity({ x, y, z }));
+                voxelVolume.setVoxelAt(x, y, z, calcDensity(
+                    { x / voxelVolumeResolutionScale, y / voxelVolumeResolutionScale, z / voxelVolumeResolutionScale }));
 
     /* DEBUG: Only fill voxels that contain an actual particle */
     /*for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)

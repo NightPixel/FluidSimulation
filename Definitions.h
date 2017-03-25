@@ -2,4 +2,3 @@
 
 #define USEPARTICLEGRID
 #define EPSILON 1e-6
-//#define DRAWPOINTS
