@@ -133,6 +133,7 @@ Program::Program(GLFWwindow* window)
 
     // Create cube positions
     resetParticles();
+    fillParticleGrid();
 }
 
 Program::~Program()
@@ -212,7 +213,6 @@ void Program::update()
             }
         }
     }
-
 }
 
 // Draws a new frame.
@@ -300,11 +300,8 @@ void Program::fillParticleGrid()
     for(size_t x = 0; x != 4; ++x)
         for (size_t y = 0; y != 4; ++y)
             for (size_t z = 0; z != 4; ++z)
-            {
                 particleGrid[x][y][z].clear();
-            }
     
-
     for (size_t i = 0; i != particleCount; ++i)
     {
         glm::vec3 pos = r[i];
@@ -382,9 +379,7 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
         for (size_t j : particleGrid[x][y][z])
-        {
             n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
-        }
 #endif
 
     if (glm::length(n) > csNormThreshold)
@@ -397,9 +392,7 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
 #else
         for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
             for (size_t j : particleGrid[x][y][z])
-            {
                 csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
-            }
 #endif
         surfaceForce = -sigma * csLaplacian * glm::normalize(n);
     }
@@ -409,21 +402,30 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
 
 float Program::calcDensity(size_t particleId) const
 {
-    float rho = 0.0f;
-    for (size_t j = 0; j != particleCount; ++j)
-        rho += m * poly6(r[particleId] - r[j], h);
-    return rho;
+    return calcDensity(r[particleId]);
 }
 
-float Program::calcDensity(const glm::vec3& position) const
+float Program::calcDensity(const glm::vec3& pos) const
 {
     float rho = 0.0f;
+
+#ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
-        rho += m * poly6(position - r[j], h);
+        rho += m * poly6(r[particleId] - r[j], h);
+#else
+    int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
+    int gridY = (int)(pos.y + 2.0f - EPSILON); int minY, maxY;
+    int gridZ = (int)(pos.z + 2.0f - EPSILON); int minZ, maxZ;
+    getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
+
+    for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
+        for (size_t j : particleGrid[x][y][z])
+            rho += m * poly6(pos - r[j], h);
+#endif
     return rho;
 }
 
-void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int & minXOut, int & maxXOut, int & minYOut, int & maxYOut, int & minZOut, int & maxZOut)
+void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int& minXOut, int& maxXOut, int& minYOut, int& maxYOut, int& minZOut, int& maxZOut) const
 {
     minXOut = std::max(gridX - 1, 0); maxXOut = std::min(gridX + 1, 3);
     minYOut = std::max(gridY - 1, 0); maxYOut = std::min(gridY + 1, 3);

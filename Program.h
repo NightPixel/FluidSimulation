@@ -70,21 +70,6 @@ private:
     glm::vec3 maxPos{ 2.0f,  2.0f,  2.0f};
     /* END DEBUG */
 
-    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
-    void fillVoxelVolume();
-    // World positions will be multiplied by this scale for the purposes of voxel indexing.
-    // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
-    // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
-    float voxelVolumeResolutionScale = 3.0f;
-    PolyVox::SimpleVolume<float> voxelVolume{{
-        worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{1, 1, 1},
-        worldPosToVoxelIndex(maxPos) + PolyVox::Vector3DInt32{1, 1, 1}
-    }};
-    PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal> surfaceMesh;
-    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor{
-        &voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh
-    };
-
     // Radius of influence
     float h = 0.5f;
     // Gas constant
@@ -121,10 +106,34 @@ private:
     glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
     float calcDensity(size_t particleId) const;
-    float calcDensity(const glm::vec3& position) const;
+    float calcDensity(const glm::vec3& pos) const;
 
     void getAdjacentCells(int gridX, int gridY, int gridZ,
         int& minXOut, int& maxXOut,
         int& minYOut, int& maxYOut,
-        int& minZOut, int& maxZOut);
+        int& minZOut, int& maxZOut) const;
+
+    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
+    void fillVoxelVolume();
+    // World positions will be multiplied by this scale for the purposes of voxel indexing.
+    // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
+    // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
+    float voxelVolumeResolutionScale = 3.0f;
+    PolyVox::SimpleVolume<float> voxelVolume{{
+            worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{
+                (int)std::ceil(h * voxelVolumeResolutionScale),
+                (int)std::ceil(h * voxelVolumeResolutionScale),
+                (int)std::ceil(h * voxelVolumeResolutionScale)
+            },
+            worldPosToVoxelIndex(maxPos) + PolyVox::Vector3DInt32{
+                (int)std::ceil(h * voxelVolumeResolutionScale),
+                (int)std::ceil(h * voxelVolumeResolutionScale),
+                (int)std::ceil(h * voxelVolumeResolutionScale)
+            },
+        }};
+    PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal> surfaceMesh;
+    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor{
+        &voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh
+    };
+
 };
