@@ -23,6 +23,12 @@ template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
     return 10.0f;
 }
 
+// A ceiling function that works on compile-time floats.
+constexpr int ceiling(float num)
+{
+    return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
+}
+
 class Program
 {
 public:
@@ -68,8 +74,14 @@ private:
     /* END DEBUG */
 
     // All particles reside inside a box with these dimensions
-    glm::vec3 minPos{-2.0f, -2.0f, -2.0f};
-    glm::vec3 maxPos{ 2.0f,  2.0f,  2.0f};
+    static constexpr float minPosX = -2.0f;
+    static constexpr float minPosY = -2.0f;
+    static constexpr float minPosZ = -2.0f;
+    static constexpr float maxPosX =  2.0f;
+    static constexpr float maxPosY =  2.0f;
+    static constexpr float maxPosZ =  2.0f;
+    glm::vec3 minPos{minPosX, minPosY, minPosZ};
+    glm::vec3 maxPos{maxPosX, maxPosY, maxPosZ};
 
     glm::vec3 worldBoundsVertices[16] = {
         {minPos.x, minPos.y, minPos.z},
@@ -91,7 +103,7 @@ private:
     };
 
     // Radius of influence
-    float h = 0.5f;
+    static constexpr float h = 0.5f;
     // Gas constant
     float k = 1000.0f;
     // Rest density
@@ -113,11 +125,13 @@ private:
     // Particle velocities
     glm::vec3 v[particleCount];
 
-    // Particle grid data structure: changes O(n^2) to O(nm): we don't have to check all other particles, but
-    // only particles in adjacent grid cells.
+    // Particle grid data structure: changes O(n^2) to O(nm): we don't have to
+    // check all other particles, but only particles in adjacent grid cells.
     // Possible TODO: Store entire particle data for better cache usage
-    // Possible TODO: Particle grid sizes are 4.0f / 1.0f: make this dependent on actual h and minPos/maxPos with dyn alloc (slow?)
-    std::vector<size_t> particleGrid[4][4][4];
+    static constexpr int gridSizeX = ceiling((maxPosX - minPosX) / h);
+    static constexpr int gridSizeY = ceiling((maxPosY - minPosY) / h);
+    static constexpr int gridSizeZ = ceiling((maxPosZ - minPosZ) / h);
+    std::vector<size_t> particleGrid[gridSizeX][gridSizeY][gridSizeZ];
 
     void fillParticleGrid();
 

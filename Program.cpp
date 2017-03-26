@@ -32,7 +32,7 @@ Program::Program(GLFWwindow* window)
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
     antTweakBar = TwNewBar("Simulation settings");
     TwDefine("GLOBAL fontsize=3");
-    TwAddVarRW(antTweakBar, "h",             TW_TYPE_FLOAT,   &h,               "min=  0.1    max=   5     step=  0.1  ");
+    //TwAddVarRW(antTweakBar, "h",             TW_TYPE_FLOAT,   &h,               "min=  0.1    max=   5     step=  0.1  ");
     TwAddVarRW(antTweakBar, "k",             TW_TYPE_FLOAT,   &k,               "min=100      max=3000     step=100    ");
     TwAddVarRW(antTweakBar, "rho0",          TW_TYPE_FLOAT,   &rho0,            "min=  1      max=  50     step=  1    ");
     TwAddVarRW(antTweakBar, "m",             TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.1  ");
@@ -263,15 +263,14 @@ void Program::resetParticles()
             {
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
                     glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
-                printf("[%i] = (%f, %f, %f)\n",
-                    z * cubeSize * cubeSize + y * cubeSize + x,
-                    0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
             }
 
     for (auto& vel : v)
         vel = glm::vec3{};
 
+#ifdef USEPARTICLEGRID
     fillParticleGrid();
+#endif
 }
 
 // Called when the mouse cursor is moved.
@@ -308,17 +307,20 @@ void Program::fillParticleGrid()
 {
     // Possible TODO: don't use vectors for fast clearing using memset
     // However, a fixed size could possibly cost a lot of memory for larger grids
-    for(size_t x = 0; x != 4; ++x)
-        for (size_t y = 0; y != 4; ++y)
-            for (size_t z = 0; z != 4; ++z)
+    for(size_t x = 0; x != gridSizeX; ++x)
+        for (size_t y = 0; y != gridSizeY; ++y)
+            for (size_t z = 0; z != gridSizeZ; ++z)
                 particleGrid[x][y][z].clear();
     
     for (size_t i = 0; i != particleCount; ++i)
     {
         glm::vec3 pos = r[i];
         
-        // Make sure values exactly at grid edge don't lead to incorrect array slot
-        particleGrid[(int)(pos.x + 2.0f - EPSILON)][(int)(pos.y + 2.0f - EPSILON)][(int)(pos.z + 2.0f - EPSILON)].push_back(i);
+        // Subtract EPSILON to make sure values exactly at grid edge don't lead to incorrect array slot
+        particleGrid
+            [(int)((pos.x - minPos.x - EPSILON) / h)]
+            [(int)((pos.y - minPos.y - EPSILON) / h)]
+            [(int)((pos.z - minPos.z - EPSILON) / h)].push_back(i);
     }
 }
 
@@ -330,9 +332,9 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
         pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #else
     glm::vec3 pos = r[particleId];
-    int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
-    int gridY = (int)(pos.y + 2.0f - EPSILON); int minY, maxY;
-    int gridZ = (int)(pos.z + 2.0f - EPSILON); int minZ, maxZ;
+    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
+    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
+    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
@@ -360,9 +362,9 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
         viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #else
     glm::vec3 pos = r[particleId];
-    int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
-    int gridY = (int)(pos.y + 2.0f - EPSILON); int minY, maxY;
-    int gridZ = (int)(pos.z + 2.0f - EPSILON); int minZ, maxZ;
+    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
+    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
+    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
@@ -383,9 +385,9 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
         n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
 #else
     glm::vec3 pos = r[particleId];
-    int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
-    int gridY = (int)(pos.y + 2.0f - EPSILON); int minY, maxY;
-    int gridZ = (int)(pos.z + 2.0f - EPSILON); int minZ, maxZ;
+    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
+    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
+    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
@@ -424,9 +426,9 @@ float Program::calcDensity(const glm::vec3& pos) const
     for (size_t j = 0; j != particleCount; ++j)
         rho += m * poly6(r[particleId] - r[j], h);
 #else
-    int gridX = (int)(pos.x + 2.0f - EPSILON); int minX, maxX;
-    int gridY = (int)(pos.y + 2.0f - EPSILON); int minY, maxY;
-    int gridZ = (int)(pos.z + 2.0f - EPSILON); int minZ, maxZ;
+    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
+    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
+    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
     for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
@@ -438,9 +440,9 @@ float Program::calcDensity(const glm::vec3& pos) const
 
 void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int& minXOut, int& maxXOut, int& minYOut, int& maxYOut, int& minZOut, int& maxZOut) const
 {
-    minXOut = std::max(gridX - 1, 0); maxXOut = std::min(gridX + 1, 3);
-    minYOut = std::max(gridY - 1, 0); maxYOut = std::min(gridY + 1, 3);
-    minZOut = std::max(gridZ - 1, 0); maxZOut = std::min(gridZ + 1, 3);
+    minXOut = std::max(gridX - 1, 0); maxXOut = std::min(gridX + 1, gridSizeX - 1);
+    minYOut = std::max(gridY - 1, 0); maxYOut = std::min(gridY + 1, gridSizeY - 1);
+    minZOut = std::max(gridZ - 1, 0); maxZOut = std::min(gridZ + 1, gridSizeZ - 1);
 }
 
 PolyVox::Vector3DInt32 Program::worldPosToVoxelIndex(const glm::vec3& worldPos) const
