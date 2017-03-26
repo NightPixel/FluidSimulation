@@ -65,10 +65,30 @@ private:
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 7;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
-    // For now, all particles reside inside a larger cube with these dimensions
+    /* END DEBUG */
+
+    // All particles reside inside a box with these dimensions
     glm::vec3 minPos{-2.0f, -2.0f, -2.0f};
     glm::vec3 maxPos{ 2.0f,  2.0f,  2.0f};
-    /* END DEBUG */
+
+    glm::vec3 worldBoundsVertices[16] = {
+        {minPos.x, minPos.y, minPos.z},
+        {maxPos.x, minPos.y, minPos.z},
+        {maxPos.x, maxPos.y, minPos.z},
+        {minPos.x, maxPos.y, minPos.z},
+        {minPos.x, minPos.y, minPos.z},
+        {minPos.x, minPos.y, maxPos.z},
+        {maxPos.x, minPos.y, maxPos.z},
+        {maxPos.x, maxPos.y, maxPos.z},
+        {minPos.x, maxPos.y, maxPos.z},
+        {minPos.x, minPos.y, maxPos.z},
+        {minPos.x, maxPos.y, maxPos.z},
+        {minPos.x, maxPos.y, minPos.z},
+        {maxPos.x, maxPos.y, minPos.z},
+        {maxPos.x, maxPos.y, maxPos.z},
+        {maxPos.x, minPos.y, maxPos.z},
+        {maxPos.x, minPos.y, minPos.z},
+    };
 
     // Radius of influence
     float h = 0.5f;

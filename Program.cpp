@@ -104,8 +104,6 @@ Program::Program(GLFWwindow* window)
     // Create a Vertex Buffer Object for the particle points
     glGenBuffers(1, &pointsVBO);
     glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
-    // Copy the vertex data
-    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
 
     // Specify the layout of the particle points vertex data
     // glm::vec3 layout:
@@ -240,8 +238,12 @@ void Program::draw()
     // Draw points
     glBindVertexArray(pointsVAO);
     glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(r), r);
-    glDrawArrays(GL_POINTS, 0, sizeof(r) / sizeof(glm::vec3));
+    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
+    glDrawArrays(GL_POINTS, 0, std::size(r));
+
+    // Draw world bounds
+    glBufferData(GL_ARRAY_BUFFER, sizeof(worldBoundsVertices), worldBoundsVertices, GL_STREAM_DRAW);
+    glDrawArrays(GL_LINE_STRIP, 0, std::size(worldBoundsVertices));
 }
 
 void Program::resetParticles()
