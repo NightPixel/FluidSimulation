@@ -226,7 +226,15 @@ void Program::draw()
     surfaceMesh.translateVertices({(float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ()});
     surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
-    const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
+    std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getRawVertexData();
+    for (auto& vert : vertices) // Clamp vertex locations to world boundaries
+    {
+        vert.position.setElements(
+            std::min(maxPos.x, std::max(minPos.x, vert.position.getX())),
+            std::min(maxPos.y, std::max(minPos.y, vert.position.getY())),
+            std::min(maxPos.z, std::max(minPos.z, vert.position.getZ()))
+        );
+    }
 
     // Draw surface mesh
     glBindVertexArray(meshVAO);
@@ -239,11 +247,11 @@ void Program::draw()
     glBindVertexArray(pointsVAO);
     glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
-    glDrawArrays(GL_POINTS, 0, std::size(r));
+    glDrawArrays(GL_POINTS, 0, (GLsizei)std::size(r));
 
     // Draw world bounds
     glBufferData(GL_ARRAY_BUFFER, sizeof(worldBoundsVertices), worldBoundsVertices, GL_STREAM_DRAW);
-    glDrawArrays(GL_LINE_STRIP, 0, std::size(worldBoundsVertices));
+    glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)std::size(worldBoundsVertices));
 }
 
 void Program::resetParticles()
