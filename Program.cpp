@@ -133,7 +133,6 @@ Program::Program(GLFWwindow* window)
 
     // Create cube positions
     resetParticles();
-    fillParticleGrid();
 }
 
 Program::~Program()
@@ -261,6 +260,8 @@ void Program::resetParticles()
 
     for (auto& vel : v)
         vel = glm::vec3{};
+
+    fillParticleGrid();
 }
 
 // Called when the mouse cursor is moved.
