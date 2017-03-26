@@ -66,17 +66,24 @@ private:
     static const int cubeSize = 7;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
     // For now, all particles reside inside a larger cube with these dimensions
-    glm::vec3 minPos = glm::vec3(-2.0f, -2.0f, -2.0f);
-    glm::vec3 maxPos = glm::vec3(2.0f, 2.0f, 2.0f);
+    glm::vec3 minPos{-2.0f, -2.0f, -2.0f};
+    glm::vec3 maxPos{ 2.0f,  2.0f,  2.0f};
     /* END DEBUG */
 
+    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
+    void fillVoxelVolume();
     // World positions will be multiplied by this scale for the purposes of voxel indexing.
     // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
     // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
     float voxelVolumeResolutionScale = 3.0f;
-    PolyVox::SimpleVolume<float> voxelVolume;
+    PolyVox::SimpleVolume<float> voxelVolume{{
+        worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{1, 1, 1},
+        worldPosToVoxelIndex(maxPos) + PolyVox::Vector3DInt32{1, 1, 1}
+    }};
     PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal> surfaceMesh;
-    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor;
+    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor{
+        &voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh
+    };
 
     // Radius of influence
     float h = 0.5f;
@@ -94,12 +101,12 @@ private:
     // (where n is the gradient field of the smoothed color field).
     float csNormThreshold = 1.0f;
     // Gravity acceleration
-    glm::vec3 gravity = glm::vec3(0.0f, -10.0f, 0.0f);
+    glm::vec3 gravity{0.0f, -10.0f, 0.0f};
 
     // Particle positions
     glm::vec3 r[particleCount];
     // Particle velocities
-    glm::vec3 v[particleCount] = {};
+    glm::vec3 v[particleCount];
 
     // Particle grid data structure: changes O(n^2) to O(nm): we don't have to check all other particles, but
     // only particles in adjacent grid cells.
@@ -120,7 +127,4 @@ private:
         int& minXOut, int& maxXOut,
         int& minYOut, int& maxYOut,
         int& minZOut, int& maxZOut);
-
-    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
-    void fillVoxelVolume();
 };

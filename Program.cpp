@@ -28,8 +28,6 @@ void TW_CALL particleResetButtonCallback(void* clientData)
 
 Program::Program(GLFWwindow* window)
     : window(window)
-    , voxelVolume(PolyVox::Region(worldPosToVoxelIndex(minPos), worldPosToVoxelIndex(maxPos)))
-    , surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
     antTweakBar = TwNewBar("Simulation settings");
@@ -227,8 +225,9 @@ void Program::draw()
     // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
     fillVoxelVolume();
     surfaceExtractor.execute();
+    const auto& lowerCorner = voxelVolume.getEnclosingRegion().getLowerCorner();
+    surfaceMesh.translateVertices({(float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ()});
     surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
-    surfaceMesh.translateVertices({ minPos.x, minPos.y, minPos.z });
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
     const std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getVertices();
 
