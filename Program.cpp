@@ -330,7 +330,8 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
     glm::vec3 pressureForce;
 #ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
-        pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
+        if (particleId != j)
+            pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #else
     const glm::vec3& pos = r[particleId];
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
@@ -342,7 +343,8 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
         for (size_t y = minY; y <= maxY; ++y)
             for (size_t z = minZ; z <= maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
-                    pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
+                    if (particleId != j)
+                        pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #endif
     return pressureForce;
 }
@@ -352,7 +354,8 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
     glm::vec3 viscosityForce;
 #ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
-        viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
+        if (particleId != j)
+            viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #else
     const glm::vec3& pos = r[particleId];
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
@@ -364,7 +367,8 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
         for (size_t y = minY; y <= maxY; ++y)
             for (size_t z = minZ; z <= maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
-                    viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
+                    if (particleId != j)
+                        viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #endif
 
     return viscosityForce;

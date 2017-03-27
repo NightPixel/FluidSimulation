@@ -24,9 +24,7 @@ inline float poly6Laplacian(const glm::vec3& rVec, float h)
 
 inline glm::vec3 spikyGradient(const glm::vec3& rVec, float h)
 {
-    const float rNorm = glm::length(rVec);
-    return rNorm == 0.0f ? glm::vec3{} :
-        -45 / (pi * pow(h, 6)) * glm::normalize(rVec) * pow(std::max(0.0f, h - rNorm), 2);
+    return -45 / (pi * pow(h, 6)) * glm::normalize(rVec) * pow(std::max(0.0f, h - glm::length(rVec)), 2);
 }
 
 inline float viscosityLaplacian(const glm::vec3& rVec, float h)
