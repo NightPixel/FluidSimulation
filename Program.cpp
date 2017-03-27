@@ -263,10 +263,8 @@ void Program::resetParticles()
     for (int z = 0; z != cubeSize; ++z)
         for (int y = 0; y != cubeSize; ++y)
             for (int x = 0; x != cubeSize; ++x)
-            {
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
                     glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
-            }
 
     for (auto& vel : v)
         vel = glm::vec3{};
@@ -317,7 +315,7 @@ void Program::fillParticleGrid()
     
     for (size_t i = 0; i != particleCount; ++i)
     {
-        glm::vec3 pos = r[i];
+        const glm::vec3& pos = r[i];
         
         // Subtract EPSILON to make sure values exactly at grid edge don't lead to incorrect array slot
         particleGrid
@@ -334,25 +332,17 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
     for (size_t j = 0; j != particleCount; ++j)
         pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #else
-    glm::vec3 pos = r[particleId];
+    const glm::vec3& pos = r[particleId];
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
     int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
     int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
-    for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (size_t j : particleGrid[x][y][z])
-        {
-            pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
-            
-            float dot = glm::dot(spikyGradient(r[j] - r[particleId], h), r[j] - r[particleId]);
-            if (dot > 0.0f)
-                printf("Pos\n");
-
-            float dot2 = glm::dot(-m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h), r[j] - r[particleId]);
-            if (dot2 > 0.0f)
-                printf("Pos2\n");
-        }
+    for (size_t x = minX; x <= maxX; ++x)
+        for (size_t y = minY; y <= maxY; ++y)
+            for (size_t z = minZ; z <= maxZ; ++z)
+                for (size_t j : particleGrid[x][y][z])
+                    pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #endif
     return pressureForce;
 }
@@ -364,15 +354,17 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
     for (size_t j = 0; j != particleCount; ++j)
         viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #else
-    glm::vec3 pos = r[particleId];
+    const glm::vec3& pos = r[particleId];
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
     int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
     int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
-    for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (size_t j : particleGrid[x][y][z])
-            viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
+    for (size_t x = minX; x <= maxX; ++x)
+        for (size_t y = minY; y <= maxY; ++y)
+            for (size_t z = minZ; z <= maxZ; ++z)
+                for (size_t j : particleGrid[x][y][z])
+                    viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #endif
 
     return viscosityForce;
@@ -380,40 +372,39 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
 
 glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
 {
-    glm::vec3 surfaceForce;
     glm::vec3 n; // Gradient field of the color field
-
 #ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
         n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
 #else
-    glm::vec3 pos = r[particleId];
+    const glm::vec3& pos = r[particleId];
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
     int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
     int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
-    for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (size_t j : particleGrid[x][y][z])
-            n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
+    for (size_t x = minX; x <= maxX; ++x)
+        for (size_t y = minY; y <= maxY; ++y)
+            for (size_t z = minZ; z <= maxZ; ++z)
+                for (size_t j : particleGrid[x][y][z])
+                    n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
 #endif
 
-    if (glm::length(n) > csNormThreshold)
-    {
-        float csLaplacian = 0.0f; // Laplacian of the color field
+    if (glm::length(n) < csNormThreshold)
+        return glm::vec3{};
 
+    float csLaplacian = 0.0f; // Laplacian of the color field
 #ifndef USEPARTICLEGRID
-        for (size_t j = 0; j != particleCount; ++j)
-            csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
+    for (size_t j = 0; j != particleCount; ++j)
+        csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
 #else
-        for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-            for (size_t j : particleGrid[x][y][z])
-                csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
+     for (size_t x = minX; x <= maxX; ++x)
+         for (size_t y = minY; y <= maxY; ++y)
+             for (size_t z = minZ; z <= maxZ; ++z)
+                 for (size_t j : particleGrid[x][y][z])
+                     csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
 #endif
-        surfaceForce = -sigma * csLaplacian * glm::normalize(n);
-    }
-
-    return surfaceForce;
+     return -sigma * csLaplacian * glm::normalize(n);
 }
 
 float Program::calcDensity(size_t particleId) const
@@ -424,19 +415,20 @@ float Program::calcDensity(size_t particleId) const
 float Program::calcDensity(const glm::vec3& pos) const
 {
     float rho = 0.0f;
-
 #ifndef USEPARTICLEGRID
     for (size_t j = 0; j != particleCount; ++j)
-        rho += m * poly6(r[particleId] - r[j], h);
+        rho += m * poly6(pos - r[j], h);
 #else
     int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
     int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
     int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
     getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
 
-    for (size_t x = minX; x <= maxX; ++x) for (size_t y = minY; y <= maxY; ++y) for (size_t z = minZ; z <= maxZ; ++z)
-        for (size_t j : particleGrid[x][y][z])
-            rho += m * poly6(pos - r[j], h);
+    for (size_t x = minX; x <= maxX; ++x)
+        for (size_t y = minY; y <= maxY; ++y)
+            for (size_t z = minZ; z <= maxZ; ++z)
+                for (size_t j : particleGrid[x][y][z])
+                    rho += m * poly6(pos - r[j], h);
 #endif
     return rho;
 }
