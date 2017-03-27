@@ -308,7 +308,7 @@ void Program::fillParticleGrid()
 {
     // Possible TODO: don't use vectors for fast clearing using memset
     // However, a fixed size could possibly cost a lot of memory for larger grids
-    for(size_t x = 0; x != gridSizeX; ++x)
+    for (size_t x = 0; x != gridSizeX; ++x)
         for (size_t y = 0; y != gridSizeY; ++y)
             for (size_t z = 0; z != gridSizeZ; ++z)
                 particleGrid[x][y][z].clear();
