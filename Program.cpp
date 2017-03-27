@@ -163,7 +163,8 @@ void Program::update()
     float rho[particleCount] = {}; // Particle densities
     float p[particleCount] = {}; // Particle pressure
     // First, calculate density and pressure at each particle position
-    for (size_t i = 0; i != particleCount; ++i)
+#pragma omp parallel for
+    for (int i = 0; i < particleCount; ++i)
     {
         rho[i] = calcDensity(i);
         p[i] = std::max(0.0f, k * (rho[i] - rho0));
@@ -171,7 +172,8 @@ void Program::update()
 
     // Calculate the force acting on each particle
     glm::vec3 forces[particleCount];
-    for (size_t i = 0; i != particleCount; ++i)
+#pragma omp parallel for
+    for (int i = 0; i < particleCount; ++i)
     {
         glm::vec3 pressureForce = calcPressureForce(i, rho, p);
 
@@ -187,7 +189,8 @@ void Program::update()
     // TODO: add external forces (for example, forces created by user input)
 
     // Move each particle
-    for (size_t i = 0; i != particleCount; ++i)
+#pragma omp parallel for
+    for (int i = 0; i < particleCount; ++i)
     {
         glm::vec3 a = forces[i] / rho[i]; // Acceleration
         // Semi-implicit Euler integration (TODO: better integration?)
