@@ -29,6 +29,13 @@ constexpr int ceiling(float num)
     return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
 }
 
+struct GridCellNeighborhood
+{
+    int minX, maxX;
+    int minY, maxY;
+    int minZ, maxZ;
+};
+
 class Program
 {
 public:
@@ -142,10 +149,7 @@ private:
     float calcDensity(size_t particleId) const;
     float calcDensity(const glm::vec3& pos) const;
 
-    void getAdjacentCells(int gridX, int gridY, int gridZ,
-        int& minXOut, int& maxXOut,
-        int& minYOut, int& maxYOut,
-        int& minZOut, int& maxZOut) const;
+    GridCellNeighborhood getAdjacentCells(const glm::vec3& pos) const;
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
     void fillVoxelVolume();

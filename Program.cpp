@@ -333,15 +333,11 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
         if (particleId != j)
             pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #else
-    const glm::vec3& pos = r[particleId];
-    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
-    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
-    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
-    getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
+    auto neighborhood = getAdjacentCells(r[particleId]);
 
-    for (size_t x = minX; x <= maxX; ++x)
-        for (size_t y = minY; y <= maxY; ++y)
-            for (size_t z = minZ; z <= maxZ; ++z)
+    for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
+        for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
+            for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                     if (particleId != j)
                         pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
@@ -357,15 +353,11 @@ glm::vec3 Program::calcViscosityForce(size_t particleId, float* rho)
         if (particleId != j)
             viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
 #else
-    const glm::vec3& pos = r[particleId];
-    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
-    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
-    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
-    getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
+    auto neighborhood = getAdjacentCells(r[particleId]);
 
-    for (size_t x = minX; x <= maxX; ++x)
-        for (size_t y = minY; y <= maxY; ++y)
-            for (size_t z = minZ; z <= maxZ; ++z)
+    for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
+        for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
+            for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                     if (particleId != j)
                         viscosityForce += mu * m * ((v[j] - v[particleId]) / rho[j]) * viscosityLaplacian(r[particleId] - r[j], h);
@@ -381,15 +373,11 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
     for (size_t j = 0; j != particleCount; ++j)
         n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
 #else
-    const glm::vec3& pos = r[particleId];
-    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
-    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
-    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
-    getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
+    auto neighborhood = getAdjacentCells(r[particleId]);
 
-    for (size_t x = minX; x <= maxX; ++x)
-        for (size_t y = minY; y <= maxY; ++y)
-            for (size_t z = minZ; z <= maxZ; ++z)
+    for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
+        for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
+            for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                     n += m * (1 / rho[j]) * poly6Gradient(r[particleId] - r[j], h);
 #endif
@@ -402,9 +390,9 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
     for (size_t j = 0; j != particleCount; ++j)
         csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
 #else
-     for (size_t x = minX; x <= maxX; ++x)
-         for (size_t y = minY; y <= maxY; ++y)
-             for (size_t z = minZ; z <= maxZ; ++z)
+    for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
+        for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
+            for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                  for (size_t j : particleGrid[x][y][z])
                      csLaplacian += m * (1 / rho[j]) * poly6Laplacian(r[particleId] - r[j], h);
 #endif
@@ -423,25 +411,27 @@ float Program::calcDensity(const glm::vec3& pos) const
     for (size_t j = 0; j != particleCount; ++j)
         rho += m * poly6(pos - r[j], h);
 #else
-    int gridX = (int)((pos.x - minPos.x - EPSILON) / h); int minX, maxX;
-    int gridY = (int)((pos.y - minPos.y - EPSILON) / h); int minY, maxY;
-    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h); int minZ, maxZ;
-    getAdjacentCells(gridX, gridY, gridZ, minX, maxX, minY, maxY, minZ, maxZ);
+    auto neighborhood = getAdjacentCells(pos);
 
-    for (size_t x = minX; x <= maxX; ++x)
-        for (size_t y = minY; y <= maxY; ++y)
-            for (size_t z = minZ; z <= maxZ; ++z)
+    for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
+        for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
+            for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                     rho += m * poly6(pos - r[j], h);
 #endif
     return rho;
 }
 
-void Program::getAdjacentCells(int gridX, int gridY, int gridZ, int& minXOut, int& maxXOut, int& minYOut, int& maxYOut, int& minZOut, int& maxZOut) const
+GridCellNeighborhood Program::getAdjacentCells(const glm::vec3& pos) const
 {
-    minXOut = std::max(gridX - 1, 0); maxXOut = std::min(gridX + 1, gridSizeX - 1);
-    minYOut = std::max(gridY - 1, 0); maxYOut = std::min(gridY + 1, gridSizeY - 1);
-    minZOut = std::max(gridZ - 1, 0); maxZOut = std::min(gridZ + 1, gridSizeZ - 1);
+    int gridX = (int)((pos.x - minPos.x - EPSILON) / h);
+    int gridY = (int)((pos.y - minPos.y - EPSILON) / h);
+    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h);
+    return {
+        std::max(gridX - 1, 0), std::min(gridX + 1, gridSizeX - 1),
+        std::max(gridY - 1, 0), std::min(gridY + 1, gridSizeY - 1),
+        std::max(gridZ - 1, 0), std::min(gridZ + 1, gridSizeZ - 1)
+    };
 }
 
 PolyVox::Vector3DInt32 Program::worldPosToVoxelIndex(const glm::vec3& worldPos) const
