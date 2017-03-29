@@ -49,28 +49,8 @@ Program::Program(GLFWwindow* window)
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
     
-    // Create and compile the vertex shader
-    vertexShader = createShaderFromSource("Simple.vert", GL_VERTEX_SHADER);
-    auto shaderInfo = checkShaderCompilation(vertexShader);
-    if (!shaderInfo.first)
-        printf("Vertex shader failed to compile!\n%s\n", shaderInfo.second.c_str());
-    else if (!shaderInfo.second.empty())
-        printf("Vertex shader compiled with warnings.\n%s\n", shaderInfo.second.c_str());
-
-    // Create and compile the fragment shader
-    fragmentShader = createShaderFromSource("Simple.frag", GL_FRAGMENT_SHADER);
-    shaderInfo = checkShaderCompilation(fragmentShader);
-    if (!shaderInfo.first)
-        printf("Vertex shader failed to compile!\n%s\n", shaderInfo.second.c_str());
-    else if (!shaderInfo.second.empty())
-        printf("Vertex shader compiled with warnings.\n%s\n", shaderInfo.second.c_str());
-
-    // Link the vertex and fragment shader into a shader program
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glBindFragDataLocation(shaderProgram, 0, "outColor");
-    glLinkProgram(shaderProgram);
+    std::tie(vertexShader, fragmentShader, shaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", { {0, "outColor"} });
+    
     glUseProgram(shaderProgram);
 
     // Create a Vertex Array Object for the surface mesh

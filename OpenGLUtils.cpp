@@ -2,6 +2,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <tuple>
 
 // Reads all lines of text out of a file, and returns a string
 // containing all those lines, separated by newline characters.
@@ -44,4 +45,39 @@ GLuint createShaderFromSource(const std::string& sourceFilePath, GLenum shaderTy
     glCompileShader(shader);
 
     return shader;
+}
+
+// Creates a shader program given a file path to a vertex shader source code file,
+// a fragment shader source code file, and a std::vector of
+// (fragment shader color number, fragment shader out variable) pairs,
+// which are passed to glBindFragDataLocation().
+std::tuple<GLuint, GLuint, GLuint> createShaderProgram(
+    const std::string& vertexSourceFilePath,
+    const std::string& fragmentSourceFilePath,
+    const std::vector<std::tuple<GLuint, const char*>>& fragDataLocations)
+{
+    // Create and compile the vertex shader
+    GLuint vertexShader = createShaderFromSource(vertexSourceFilePath, GL_VERTEX_SHADER);
+    auto shaderInfo = checkShaderCompilation(vertexShader);
+    if (!shaderInfo.first)
+        printf("Vertex shader failed to compile!\n%s\n", shaderInfo.second.c_str());
+    else if (!shaderInfo.second.empty())
+        printf("Vertex shader compiled with warnings.\n%s\n", shaderInfo.second.c_str());
+
+    // Create and compile the fragment shader
+    GLuint fragmentShader = createShaderFromSource(fragmentSourceFilePath, GL_FRAGMENT_SHADER);
+    shaderInfo = checkShaderCompilation(fragmentShader);
+    if (!shaderInfo.first)
+        printf("Vertex shader failed to compile!\n%s\n", shaderInfo.second.c_str());
+    else if (!shaderInfo.second.empty())
+        printf("Vertex shader compiled with warnings.\n%s\n", shaderInfo.second.c_str());
+
+    // Link the vertex and fragment shader into a shader program
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    for (const auto& pair : fragDataLocations)
+        glBindFragDataLocation(shaderProgram, std::get<0>(pair), std::get<1>(pair));
+    glLinkProgram(shaderProgram);
+    return std::make_tuple(vertexShader, fragmentShader, shaderProgram);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <GL/glew.h>
 
 // Reads all lines of text out of a file, and returns a string
@@ -14,3 +15,13 @@ std::pair<bool, std::string> checkShaderCompilation(GLuint shaderNumber);
 
 // Creates a shader of the given type from the source code in the file at the given path.
 GLuint createShaderFromSource(const std::string& sourceFilePath, GLenum shaderType);
+
+// Creates a shader program given a file path to a vertex shader source code file,
+// a fragment shader source code file, and a std::vector of
+// (fragment shader color number, fragment shader out variable) pairs,
+// which are passed to glBindFragDataLocation().
+// Returns a (vertex shader ID, fragment shader ID, program ID) tuple.
+std::tuple<GLuint, GLuint, GLuint> createShaderProgram(
+    const std::string& vertexSourceFilePath,
+    const std::string& fragmentSourceFilePath,
+    const std::vector<std::tuple<GLuint, const char*>>& fragDataLocations);
