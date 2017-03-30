@@ -159,9 +159,9 @@ void Program::update()
 
     float add = holdShift ? 0.06f : 0.03f;
 
-    if(holdForward)
+    if (holdForward)
         gridOffset.z -= add;
-    else if(holdBackward)
+    else if (holdBackward)
         gridOffset.z += add;
 
     if (holdRight)
@@ -343,57 +343,33 @@ void Program::onMouseScrolled(float yOffset)
     camera.zoom(yOffset / 30.0f);
 }
 
+// Called when a key is pressed or released.
 void Program::onKeypress(int key, int action)
 {
-    std::cout << "K: " << key << " A: " << action << std::endl;
-    if (key == 'W')
+    printf("K: %i A: %i\n", key, action);
+    switch (key)
     {
-        if (action == 1)
-            holdForward = true;
-        else if (action == 0)
-            holdForward = false;
-    }
-    else if (key == 'S')
-    {
-        if (action == 1)
-            holdBackward = true;
-        else if (action == 0)
-            holdBackward = false;
-    }
-    else if (key == 'A')
-    {
-        if (action == 1)
-            holdLeft = true;
-        else if (action == 0)
-            holdLeft = false;
-    }
-    else if (key == 'D')
-    {
-        if (action == 1)
-            holdRight = true;
-        else if (action == 0)
-            holdRight = false;
-    }
-    else if (key == 32) // Space
-    {
-        if (action == 1)
-            holdUp = true;
-        else if (action == 0)
-            holdUp = false;
-    }
-    else if (key == 341) // Space
-    {
-        if (action == 1)
-            holdDown = true;
-        else if (action == 0)
-            holdDown = false;
-    }
-    else if (key == 340) // Shift
-    {
-        if (action == 1)
-            holdShift = true;
-        else if (action == 0)
-            holdShift = false;
+    case 'W':
+        holdForward = action != GLFW_RELEASE;
+        break;
+    case 'S':
+        holdBackward = action != GLFW_RELEASE;
+        break;
+    case 'A':
+        holdLeft = action != GLFW_RELEASE;
+        break;
+    case 'D':
+        holdRight = action != GLFW_RELEASE;
+        break;
+    case 32: // Space
+        holdUp = action != GLFW_RELEASE;
+        break;
+    case 341: // Left control
+        holdDown = action != GLFW_RELEASE;
+        break;
+    case 340: // Left shift
+        holdShift = action != GLFW_RELEASE;
+        break;
     }
 }
 

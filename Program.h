@@ -53,8 +53,7 @@ public:
     void onMouseMoved(float dxPos, float dyPos);
     // Called when the mouse wheel is scrolled.
     void onMouseScrolled(float yOffset);
-
-    // Called when a key is pressed/released
+    // Called when a key is pressed or released.
     void onKeypress(int key, int action);
 
     // Delta time step; the simulation advances exactly dt seconds every update() call. 
