@@ -408,7 +408,7 @@ glm::vec3 Program::calcPressureForce(size_t particleId, float* rho, float* p)
         for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
             for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
-                    if (particleId != j)
+                    if (particleId != j && r[particleId] != r[j]) // spikyGradient will return NaN when r_i == r_j
                         pressureForce += -m * ((p[particleId] + p[j]) / (2 * rho[j])) * spikyGradient(r[particleId] - r[j], h);
 #endif
     return pressureForce;
