@@ -49,9 +49,57 @@ Program::Program(GLFWwindow* window)
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
     
-    std::tie(vertexShader, fragmentShader, shaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", { {0, "outColor"} });
-    
-    glUseProgram(shaderProgram);
+    std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", { {0, "outColor"} });
+    glUseProgram(simpleShaderProgram);
+
+    // Set up model, view, projection matrices
+    glUniformMatrix4fv(glGetUniformLocation(simpleShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    simpleViewUniform = glGetUniformLocation(simpleShaderProgram, "view");
+    glUniformMatrix4fv(glGetUniformLocation(simpleShaderProgram, "proj"), 1, GL_FALSE,
+        glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
+    );
+
+    // Set up fragment shader uniforms
+    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "minWorldPos"), 1, glm::value_ptr(minPos));
+    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "maxWorldPos"), 1, glm::value_ptr(maxPos));
+
+    // Create a Vertex Array Object for the particle points
+    glGenVertexArrays(1, &pointsVAO);
+    glBindVertexArray(pointsVAO);
+    // Create a Vertex Buffer Object for the particle points
+    glGenBuffers(1, &pointsVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+
+    // Specify the layout of the particle points vertex data
+    // glm::vec3 layout:
+    //    (x, y, z)-position (3 floats)
+    GLint pointsPosAttrib = glGetAttribLocation(simpleShaderProgram, "position");
+    glEnableVertexAttribArray(pointsPosAttrib);
+    glVertexAttribPointer(pointsPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
+
+    std::tie(waterVertexShader, waterFragmentShader, waterShaderProgram) = createShaderProgram("Water.vert", "Water.frag", { { 0, "outColor" } });
+    glUseProgram(waterShaderProgram);
+
+    // Set up model, view, projection matrices
+    glUniformMatrix4fv(glGetUniformLocation(waterShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    waterViewUniform = glGetUniformLocation(waterShaderProgram, "view");
+    glUniformMatrix4fv(glGetUniformLocation(waterShaderProgram, "proj"), 1, GL_FALSE,
+        glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
+    );
+
+    // Set up fragment shader uniforms
+    waterCamUniform = glGetUniformLocation(waterShaderProgram, "camPos");
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "lightPos"), 1, glm::value_ptr(glm::vec3{3.0f, 3.0f, 3.0f}));
+
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "ambientSceneColor"), 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.5f}));
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "ambientLightColor"), 1, glm::value_ptr(glm::vec3{0.1f, 0.1f, 0.1f}));
+
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "diffuseMaterialColor"), 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.95f}));
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "diffuseLightColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
+
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "specularMaterialColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
+    glUniform3fv(glGetUniformLocation(waterShaderProgram, "specularLightColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
+    glUniform1i(glGetUniformLocation(waterShaderProgram, "shininess"), 32);
 
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &meshVAO);
@@ -68,56 +116,28 @@ Program::Program(GLFWwindow* window)
     //    (x, y, z)-position (3 floats)
     //    (x, y, z)-normal   (3 floats)
     //    material           (1 float)
-    GLint meshPosAttrib = glGetAttribLocation(shaderProgram, "position");
+    GLint meshPosAttrib = glGetAttribLocation(waterShaderProgram, "position");
     glEnableVertexAttribArray(meshPosAttrib);
     glVertexAttribPointer(meshPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-    GLint meshNormAttrib = glGetAttribLocation(shaderProgram, "normal");
+    GLint meshNormAttrib = glGetAttribLocation(waterShaderProgram, "normal");
     glEnableVertexAttribArray(meshNormAttrib);
     glVertexAttribPointer(meshNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-    GLint meshMatAttrib = glGetAttribLocation(shaderProgram, "material");
+    GLint meshMatAttrib = glGetAttribLocation(waterShaderProgram, "material");
     glEnableVertexAttribArray(meshMatAttrib);
     glVertexAttribPointer(meshMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
-
-    // Create a Vertex Array Object for the particle points
-    glGenVertexArrays(1, &pointsVAO);
-    glBindVertexArray(pointsVAO);
-    // Create a Vertex Buffer Object for the particle points
-    glGenBuffers(1, &pointsVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
-
-    // Specify the layout of the particle points vertex data
-    // glm::vec3 layout:
-    //    (x, y, z)-position (3 floats)
-    GLint pointsPosAttrib = glGetAttribLocation(shaderProgram, "position");
-    glEnableVertexAttribArray(pointsPosAttrib);
-    glVertexAttribPointer(pointsPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
-
-    // Set up model, view, projection matrices
-    glm::mat4 model{}; // Identity matrix
-    GLint uniModel = glGetUniformLocation(shaderProgram, "model");
-    glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
-
-    uniView = glGetUniformLocation(shaderProgram, "view");
-
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f);
-    GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
-    glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
     
-    // Set up fragment shader color uniforms
-    GLint uniMinWorldPos = glGetUniformLocation(shaderProgram, "minWorldPos");
-    glUniform3fv(uniMinWorldPos, 1, glm::value_ptr(minPos));
-    GLint uniMaxWorldPos = glGetUniformLocation(shaderProgram, "maxWorldPos");
-    glUniform3fv(uniMaxWorldPos, 1, glm::value_ptr(maxPos));
-
     // Create cube positions
     resetParticles();
 }
 
 Program::~Program()
 {
-    glDeleteProgram(shaderProgram);
-    glDeleteShader(fragmentShader);
-    glDeleteShader(vertexShader);
+    glDeleteProgram(simpleShaderProgram);
+    glDeleteShader(simpleFragmentShader);
+    glDeleteShader(simpleVertexShader);
+    glDeleteProgram(waterShaderProgram);
+    glDeleteShader(waterFragmentShader);
+    glDeleteShader(waterVertexShader);
 
     glDeleteBuffers(1, &meshEBO);
     glDeleteBuffers(1, &meshVBO);
@@ -198,10 +218,6 @@ void Program::update()
 // Draws a new frame.
 void Program::draw()
 {
-    // Update view matrix
-    glm::mat4 view = camera.getViewMatrix();
-    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-
     // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
     fillVoxelVolume();
     surfaceExtractor.execute();
@@ -219,12 +235,20 @@ void Program::draw()
         );
     }
 
+    const glm::mat4 view = camera.getViewMatrix();
+    glUseProgram(waterShaderProgram);
+    glUniformMatrix4fv(waterViewUniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniform3fv(waterCamUniform, 1, glm::value_ptr(camera.getPosition()));
+
     // Draw surface mesh
     glBindVertexArray(meshVAO);
     glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
     glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+
+    glUseProgram(simpleShaderProgram);
+    glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));
 
     // Draw points
     glBindVertexArray(pointsVAO);

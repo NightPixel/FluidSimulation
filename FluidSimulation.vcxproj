@@ -87,6 +87,8 @@
   <ItemGroup>
     <None Include="Simple.frag" />
     <None Include="Simple.vert" />
+    <None Include="Water.frag" />
+    <None Include="Water.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />

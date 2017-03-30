@@ -67,10 +67,10 @@ private:
     GLuint meshVAO, pointsVAO;
     GLuint meshVBO, pointsVBO;
     GLuint meshEBO;
-    GLuint vertexShader;
-    GLuint fragmentShader;
-    GLuint shaderProgram;
-    GLint uniView;
+    GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
+    GLuint waterVertexShader, waterFragmentShader, waterShaderProgram;
+    GLint simpleViewUniform, waterViewUniform;
+    GLint waterCamUniform;
     int windowSizeX;
     int windowSizeY;
 

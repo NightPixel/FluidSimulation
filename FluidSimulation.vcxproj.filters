@@ -41,6 +41,12 @@
     <None Include="Simple.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Water.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Water.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OpenGLUtils.h">

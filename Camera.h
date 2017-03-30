@@ -18,12 +18,12 @@ public:
     // Gets the camera's view matrix.
     glm::mat4 getViewMatrix() const;
 
+    // Gets the camera position in world coordinates.
+    glm::vec3 getPosition() const;
+
 private:
     // Gets the camera position in spherical coordinates; the target position is the origin.
     glm::vec3 toCartesian() const;
-    
-    // Gets the camera position in world coordinates.
-    glm::vec3 getPosition() const;
 
     // The camera position is stored in spherical coordinates.
     // Note that a different convention is used from the source implementation on StackOverflow;
