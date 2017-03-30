@@ -3,6 +3,7 @@
 #include "OpenGLUtils.h"
 #include "Randomizer.h"
 #include "Definitions.h"
+#include "Utils.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -156,6 +157,40 @@ void Program::update()
     //    vert += Randomizer::random(-0.001f, 0.001f);
     /* END DEBUG */
 
+    float add = holdShift ? 0.06f : 0.03f;
+
+    if(holdForward)
+        gridOffset.z -= add;
+    else if(holdBackward)
+        gridOffset.z += add;
+
+    if (holdRight)
+        gridOffset.x += add;
+    else if (holdLeft)
+        gridOffset.x -= add;
+
+    if (holdUp)
+        gridOffset.y += add;
+    else if (holdDown)
+        gridOffset.y -= add;
+
+    worldBoundsVertices[0] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[1] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[2] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[3] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[4] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[5] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[6] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[7] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[8] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[9] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[10] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[11] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[12] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
+    worldBoundsVertices[13] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[14] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
+    worldBoundsVertices[15] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
+
 #ifdef USEPARTICLEGRID
     fillParticleGrid();
 #endif
@@ -201,14 +236,14 @@ void Program::update()
         // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
         for (int dim = 0; dim != 3; ++dim) // Loop over x, y and z components
         {
-            if (r[i][dim] < minPos[dim])
+            if (r[i][dim] < minPos[dim] + gridOffset[dim])
             {
-                r[i][dim] = minPos[dim];
+                r[i][dim] = minPos[dim] + gridOffset[dim];
                 v[i][dim] = -v[i][dim];
             }
-            else if (r[i][dim] > maxPos[dim])
+            else if (r[i][dim] > maxPos[dim] + gridOffset[dim])
             {
-                r[i][dim] = maxPos[dim];
+                r[i][dim] = maxPos[dim] + gridOffset[dim];
                 v[i][dim] = -v[i][dim];
             }
         }
@@ -229,9 +264,9 @@ void Program::draw()
     for (auto& vert : vertices) // Clamp vertex locations to world boundaries
     {
         vert.position.setElements(
-            std::min(maxPos.x, std::max(minPos.x, vert.position.getX())),
-            std::min(maxPos.y, std::max(minPos.y, vert.position.getY())),
-            std::min(maxPos.z, std::max(minPos.z, vert.position.getZ()))
+            std::min(maxPos.x + gridOffset.x, std::max(minPos.x + gridOffset.x, vert.position.getX() + gridOffset.x)),
+            std::min(maxPos.y + gridOffset.y, std::max(minPos.y + gridOffset.y, vert.position.getY() + gridOffset.y)),
+            std::min(maxPos.z + gridOffset.z, std::max(minPos.z + gridOffset.z, vert.position.getZ() + gridOffset.z))
         );
     }
 
@@ -308,6 +343,60 @@ void Program::onMouseScrolled(float yOffset)
     camera.zoom(yOffset / 30.0f);
 }
 
+void Program::onKeypress(int key, int action)
+{
+    std::cout << "K: " << key << " A: " << action << std::endl;
+    if (key == 'W')
+    {
+        if (action == 1)
+            holdForward = true;
+        else if (action == 0)
+            holdForward = false;
+    }
+    else if (key == 'S')
+    {
+        if (action == 1)
+            holdBackward = true;
+        else if (action == 0)
+            holdBackward = false;
+    }
+    else if (key == 'A')
+    {
+        if (action == 1)
+            holdLeft = true;
+        else if (action == 0)
+            holdLeft = false;
+    }
+    else if (key == 'D')
+    {
+        if (action == 1)
+            holdRight = true;
+        else if (action == 0)
+            holdRight = false;
+    }
+    else if (key == 32) // Space
+    {
+        if (action == 1)
+            holdUp = true;
+        else if (action == 0)
+            holdUp = false;
+    }
+    else if (key == 341) // Space
+    {
+        if (action == 1)
+            holdDown = true;
+        else if (action == 0)
+            holdDown = false;
+    }
+    else if (key == 340) // Shift
+    {
+        if (action == 1)
+            holdShift = true;
+        else if (action == 0)
+            holdShift = false;
+    }
+}
+
 void Program::fillParticleGrid()
 {
     // Possible TODO: don't use vectors for fast clearing using memset
@@ -323,9 +412,9 @@ void Program::fillParticleGrid()
         
         // Subtract EPSILON to make sure values exactly at grid edge don't lead to incorrect array slot
         particleGrid
-            [(int)((pos.x - minPos.x - EPSILON) / h)]
-            [(int)((pos.y - minPos.y - EPSILON) / h)]
-            [(int)((pos.z - minPos.z - EPSILON) / h)].push_back(i);
+            [clamp(0, gridSizeX - 1, (int)((pos.x - (minPos.x + gridOffset.x) - EPSILON) / h))]
+            [clamp(0, gridSizeY - 1, (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h))]
+            [clamp(0, gridSizeZ - 1, (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h))].push_back(i);
     }
 }
 
@@ -428,9 +517,9 @@ float Program::calcDensity(const glm::vec3& pos) const
 
 GridCellNeighborhood Program::getAdjacentCells(const glm::vec3& pos) const
 {
-    int gridX = (int)((pos.x - minPos.x - EPSILON) / h);
-    int gridY = (int)((pos.y - minPos.y - EPSILON) / h);
-    int gridZ = (int)((pos.z - minPos.z - EPSILON) / h);
+    int gridX = (int)((pos.x - (minPos.x + gridOffset.x) - EPSILON) / h);
+    int gridY = (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h);
+    int gridZ = (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h);
     return {
         std::max(gridX - 1, 0), std::min(gridX + 1, gridSizeX - 1),
         std::max(gridY - 1, 0), std::min(gridY + 1, gridSizeY - 1),
@@ -441,9 +530,9 @@ GridCellNeighborhood Program::getAdjacentCells(const glm::vec3& pos) const
 PolyVox::Vector3DInt32 Program::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
     return {
-        (int)(worldPos.x * voxelVolumeResolutionScale),
-        (int)(worldPos.y * voxelVolumeResolutionScale),
-        (int)(worldPos.z * voxelVolumeResolutionScale)
+        (int)((worldPos.x - gridOffset.x) * voxelVolumeResolutionScale),
+        (int)((worldPos.y - gridOffset.y) * voxelVolumeResolutionScale),
+        (int)((worldPos.z - gridOffset.z) * voxelVolumeResolutionScale)
     };
 }
 
@@ -457,7 +546,7 @@ void Program::fillVoxelVolume()
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(
-                    { x / voxelVolumeResolutionScale, y / voxelVolumeResolutionScale, z / voxelVolumeResolutionScale }));
+                    { x / voxelVolumeResolutionScale + gridOffset.x, y / voxelVolumeResolutionScale + gridOffset.y, z / voxelVolumeResolutionScale + gridOffset.z }));
 
     /* DEBUG: Only fill voxels that contain an actual particle */
     /*for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)

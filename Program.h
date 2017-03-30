@@ -54,10 +54,21 @@ public:
     // Called when the mouse wheel is scrolled.
     void onMouseScrolled(float yOffset);
 
+    // Called when a key is pressed/released
+    void onKeypress(int key, int action);
+
     // Delta time step; the simulation advances exactly dt seconds every update() call. 
     float dt = 0.01f;
     // Is the simulation paused?
     bool paused = true;
+
+    bool holdForward = false;
+    bool holdBackward = false;
+    bool holdRight = false;
+    bool holdLeft = false;
+    bool holdUp = false;
+    bool holdDown = false;
+    bool holdShift = false;
 
 private:
     Camera camera;
@@ -89,6 +100,7 @@ private:
     static constexpr float maxPosZ =  2.0f;
     glm::vec3 minPos{minPosX, minPosY, minPosZ};
     glm::vec3 maxPos{maxPosX, maxPosY, maxPosZ};
+    glm::vec3 gridOffset = { 0.0f, 0.0f, 0.0f };
 
     glm::vec3 worldBoundsVertices[16] = {
         {minPos.x, minPos.y, minPos.z},

@@ -42,6 +42,8 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     TwEventKeyGLFW(TwConvertKeyGLFW3to2(key), action);
+    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
+    program->onKeypress(key, action);
 }
 
 // Callback function called by GLFW when a Unicode character is input.
