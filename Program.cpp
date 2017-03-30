@@ -264,9 +264,9 @@ void Program::draw()
     for (auto& vert : vertices) // Clamp vertex locations to world boundaries
     {
         vert.position.setElements(
-            std::min(maxPos.x + gridOffset.x, std::max(minPos.x + gridOffset.x, vert.position.getX() + gridOffset.x)),
-            std::min(maxPos.y + gridOffset.y, std::max(minPos.y + gridOffset.y, vert.position.getY() + gridOffset.y)),
-            std::min(maxPos.z + gridOffset.z, std::max(minPos.z + gridOffset.z, vert.position.getZ() + gridOffset.z))
+            clamp(minPos.x + gridOffset.x, maxPos.x + gridOffset.x, vert.position.getX() + gridOffset.x),
+            clamp(minPos.y + gridOffset.y, maxPos.y + gridOffset.y, vert.position.getY() + gridOffset.y),
+            clamp(minPos.z + gridOffset.z, maxPos.z + gridOffset.z, vert.position.getZ() + gridOffset.z)
         );
     }
 
