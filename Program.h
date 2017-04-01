@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Camera.h"
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <AntTweakBar.h>
+#include "ProgramBase.h"
 #include <PolyVoxCore/MarchingCubesSurfaceExtractor.h>
 #include <PolyVoxCore/SurfaceMesh.h>
 #include <PolyVoxCore/SimpleVolume.h>
@@ -29,18 +26,10 @@ constexpr int ceiling(float num)
     return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
 }
 
-struct GridCellNeighborhood
-{
-    int minX, maxX;
-    int minY, maxY;
-    int minZ, maxZ;
-};
-
-class Program
+class Program : public ProgramBase
 {
 public:
-    Program(GLFWwindow* window);
-    ~Program();
+    explicit Program(GLFWwindow* window);
 
     // Updates the state of the program.
     void update();
@@ -49,40 +38,12 @@ public:
     // Resets all particles to their initial position, with zero velocity.
     void resetParticles();
 
-    // Called when the mouse cursor is moved.
-    void onMouseMoved(float dxPos, float dyPos);
-    // Called when the mouse wheel is scrolled.
-    void onMouseScrolled(float yOffset);
-    // Called when a key is pressed or released.
-    void onKeypress(int key, int action);
-
     // Delta time step; the simulation advances exactly dt seconds every update() call. 
     float dt = 0.01f;
     // Is the simulation paused?
     bool paused = true;
 
-    bool holdForward = false;
-    bool holdBackward = false;
-    bool holdRight = false;
-    bool holdLeft = false;
-    bool holdUp = false;
-    bool holdDown = false;
-    bool holdShift = false;
-
 private:
-    Camera camera;
-    GLFWwindow* window;
-    TwBar* antTweakBar;
-
-    GLuint meshVAO, pointsVAO;
-    GLuint meshVBO, pointsVBO;
-    GLuint meshEBO;
-    GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
-    GLuint waterVertexShader, waterFragmentShader, waterShaderProgram;
-    GLint simpleViewUniform, waterViewUniform;
-    GLint waterCamUniform;
-    int windowSizeX;
-    int windowSizeY;
 
     /* DEBUG */
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
@@ -153,13 +114,19 @@ private:
 
     void fillParticleGrid();
 
+    float calcDensity(size_t particleId) const;
+    float calcDensity(const glm::vec3& pos) const;
+
     glm::vec3 calcPressureForce(size_t particleId, float* rho, float* p);
     glm::vec3 calcViscosityForce(size_t particleId, float* rho);
     glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
-    float calcDensity(size_t particleId) const;
-    float calcDensity(const glm::vec3& pos) const;
-
+    struct GridCellNeighborhood
+    {
+        int minX, maxX;
+        int minY, maxY;
+        int minZ, maxZ;
+    };
     GridCellNeighborhood getAdjacentCells(const glm::vec3& pos) const;
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
@@ -184,5 +151,4 @@ private:
     PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor{
         &voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh
     };
-
 };
