@@ -1,4 +1,4 @@
-#include "Program.h"
+#include "FluidVisualizer.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
@@ -13,7 +13,7 @@ void cursorPositionCallback(GLFWwindow* window, double xPos, double yPos)
     static double prevXPos;
     static double prevYPos;
 
-    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
+    FluidBase* program = static_cast<FluidBase*>(glfwGetWindowUserPointer(window));
 
     program->onMouseMoved((float)(xPos - prevXPos), (float)(yPos - prevYPos));
 
@@ -27,7 +27,7 @@ void scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
     if (TwEventMouseWheelGLFW((int)yOffset))
         return;
 
-    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
+    FluidBase* program = static_cast<FluidBase*>(glfwGetWindowUserPointer(window));
 
     program->onMouseScrolled((float)yOffset);
 }
@@ -42,7 +42,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     TwEventKeyGLFW(TwConvertKeyGLFW3to2(key), action);
-    Program* program = static_cast<Program*>(glfwGetWindowUserPointer(window));
+    FluidBase* program = static_cast<FluidBase*>(glfwGetWindowUserPointer(window));
     program->onKeypress(key, action);
 }
 
@@ -73,7 +73,7 @@ int main()
     TwInit(TW_OPENGL_CORE, nullptr);
     TwWindowSize(windowSizeX, windowSizeY);
 
-    Program fluidSimulationProgram(window);
+    FluidVisualizer fluidSimulationProgram(window);
     glfwSetWindowUserPointer(window, &fluidSimulationProgram);
     glfwSetCursorPosCallback(window, cursorPositionCallback);
     glfwSetScrollCallback(window, scrollCallback);
