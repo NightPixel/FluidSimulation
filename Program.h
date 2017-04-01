@@ -157,6 +157,12 @@ private:
     glm::vec3 calcViscosityForce(size_t particleId, float* rho);
     glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
+    static constexpr int lookupTableSize = h*h * 1e4; // e.g. (0.5 * 0.5) * 1e4 = 2500
+
+    float poly6LookupTable[lookupTableSize];
+
+    void fillKernelLookupTables();
+
     float calcDensity(size_t particleId) const;
     float calcDensity(const glm::vec3& pos) const;
 

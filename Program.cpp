@@ -129,6 +129,9 @@ Program::Program(GLFWwindow* window)
     
     // Create cube positions
     resetParticles();
+
+    // Fill kernel lookup tables
+    fillKernelLookupTables();
 }
 
 Program::~Program()
@@ -468,6 +471,17 @@ glm::vec3 Program::calcSurfaceForce(size_t particleId, float* rho)
      return -sigma * csLaplacian * glm::normalize(n);
 }
 
+void Program::fillKernelLookupTables()
+{
+    // poly6 lookup table
+#pragma omp parallel for
+    for (int i = 0; i < lookupTableSize; ++i)
+    {
+        float squaredDistance = i * 1e-4;
+        poly6LookupTable[i] = poly6(squaredDistance, h);
+    }
+}
+
 float Program::calcDensity(size_t particleId) const
 {
     return calcDensity(r[particleId]);
@@ -486,7 +500,17 @@ float Program::calcDensity(const glm::vec3& pos) const
         for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
             for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
-                    rho += m * poly6(pos - r[j], h);
+                {
+                    float sqLen = glm::length2(pos - r[j]);
+                    if (sqLen < h*h)
+                    {
+                        int lookupIndex = 1e4 * glm::length2(pos - r[j]);
+                        rho += m * poly6LookupTable[lookupIndex]; 
+
+                        // Non-lookup table version:
+                        //rho += m * poly6(sqLen, h);
+                    }
+                }
 #endif
     return rho;
 }

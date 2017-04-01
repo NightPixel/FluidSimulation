@@ -11,6 +11,11 @@ inline float poly6(const glm::vec3& rVec, float h)
     return 315 / (64 * pi * pow(h, 9)) * pow(std::max(0.0f, h*h - glm::length2(rVec)), 3);
 }
 
+inline float poly6(const float rSqLen, float h)
+{
+    return 315 / (64 * pi * pow(h, 9)) * pow(std::max(0.0f, h*h - rSqLen), 3);
+}
+
 inline glm::vec3 poly6Gradient(const glm::vec3& rVec, float h)
 {
     return -945 / (32 * pi * pow(h, 9)) * rVec * pow(std::max(0.0f, h*h - glm::length2(rVec)), 2);
