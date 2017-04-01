@@ -86,7 +86,7 @@ private:
 
     /* DEBUG */
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
-    static const int cubeSize = 7;
+    static const int cubeSize = 9;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
     /* END DEBUG */
 
@@ -167,7 +167,7 @@ private:
     // World positions will be multiplied by this scale for the purposes of voxel indexing.
     // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
     // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
-    float voxelVolumeResolutionScale = 3.0f;
+    float voxelVolumeResolutionScale = 10.0f;
     PolyVox::SimpleVolume<float> voxelVolume{{
             worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{
                 (int)std::ceil(h * voxelVolumeResolutionScale),

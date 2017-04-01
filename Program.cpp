@@ -518,11 +518,13 @@ void Program::fillVoxelVolume()
     const PolyVox::Vector3DInt32& lowerCorner = volumeRegion.getLowerCorner();
     const PolyVox::Vector3DInt32& upperCorner = volumeRegion.getUpperCorner();
 
+    float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
+#pragma omp parallel for
     for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(
-                    { x / voxelVolumeResolutionScale + gridOffset.x, y / voxelVolumeResolutionScale + gridOffset.y, z / voxelVolumeResolutionScale + gridOffset.z }));
+                    { x * invVoxelVolumeResolutionScale + gridOffset.x, y * invVoxelVolumeResolutionScale + gridOffset.y, z * invVoxelVolumeResolutionScale + gridOffset.z }));
 
     /* DEBUG: Only fill voxels that contain an actual particle */
     /*for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
