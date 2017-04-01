@@ -11,3 +11,9 @@ T clamp(T min, T max, T value)
     else
         return value;
 }
+
+// A ceiling function that works on compile-time floats.
+constexpr int ceiling(float num)
+{
+    return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
+}

@@ -5,10 +5,10 @@
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
 
-class ProgramBase
+class FluidBase
 {
 public:
-    explicit ProgramBase(GLFWwindow* window);
+    explicit FluidBase(GLFWwindow* window);
 
     // Called when the mouse cursor is moved.
     void onMouseMoved(float dxPos, float dyPos);
@@ -18,19 +18,9 @@ public:
     void onKeypress(int key, int action);
 
 protected:
-    ~ProgramBase();
-
     Camera camera;
     GLFWwindow* window;
     TwBar* antTweakBar;
-
-    GLuint meshVAO, pointsVAO;
-    GLuint meshVBO, pointsVBO;
-    GLuint meshEBO;
-    GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
-    GLuint waterVertexShader, waterFragmentShader, waterShaderProgram;
-    GLint simpleViewUniform, waterViewUniform;
-    GLint waterCamUniform;
     int windowSizeX;
     int windowSizeY;
 

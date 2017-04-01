@@ -1,40 +1,16 @@
 #pragma once
 
-#include "ProgramBase.h"
-#include <PolyVoxCore/MarchingCubesSurfaceExtractor.h>
-#include <PolyVoxCore/SurfaceMesh.h>
-#include <PolyVoxCore/SimpleVolume.h>
+#include "FluidBase.h"
+#include "Utils.h"
 #include <vector>
 
-// Callback function called by AntTweakBar when the single-step button is clicked.
-void TW_CALL stepButtonCallback(void* clientData);
-
-// Callback function called by AntTweakBar when the particle reset button is clicked.
-void TW_CALL particleResetButtonCallback(void* clientData);
-
-// Returns the density value above which a voxel is considered solid.
-// Template specialization of PolyVox::DefaultMarchingCubesController<float>::getThreshold()
-template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
-    PolyVox::DefaultMarchingCubesController<float>::getThreshold()
-{
-    return 10.0f;
-}
-
-// A ceiling function that works on compile-time floats.
-constexpr int ceiling(float num)
-{
-    return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
-}
-
-class Program : public ProgramBase
+class FluidSimulator : public FluidBase
 {
 public:
-    explicit Program(GLFWwindow* window);
+    explicit FluidSimulator(GLFWwindow* window);
 
     // Updates the state of the program.
     void update();
-    // Draws a new frame.
-    void draw();
     // Resets all particles to their initial position, with zero velocity.
     void resetParticles();
 
@@ -43,8 +19,7 @@ public:
     // Is the simulation paused?
     bool paused = true;
 
-private:
-
+protected:
     /* DEBUG */
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 9;
@@ -104,6 +79,13 @@ private:
     // Particle velocities
     glm::vec3 v[particleCount];
 
+    float calcDensity(size_t particleId) const;
+    float calcDensity(const glm::vec3& pos) const;
+
+    glm::vec3 calcPressureForce(size_t particleId, const float* const rho, const float* const p) const;
+    glm::vec3 calcViscosityForce(size_t particleId, const float* const rho) const;
+    glm::vec3 calcSurfaceForce(size_t particleId, const float* const rho) const;
+
     // Particle grid data structure: changes O(n^2) to O(nm): we don't have to
     // check all other particles, but only particles in adjacent grid cells.
     // Possible TODO: Store entire particle data for better cache usage
@@ -114,13 +96,6 @@ private:
 
     void fillParticleGrid();
 
-    float calcDensity(size_t particleId) const;
-    float calcDensity(const glm::vec3& pos) const;
-
-    glm::vec3 calcPressureForce(size_t particleId, float* rho, float* p);
-    glm::vec3 calcViscosityForce(size_t particleId, float* rho);
-    glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
-
     struct GridCellNeighborhood
     {
         int minX, maxX;
@@ -128,27 +103,4 @@ private:
         int minZ, maxZ;
     };
     GridCellNeighborhood getAdjacentCells(const glm::vec3& pos) const;
-
-    PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
-    void fillVoxelVolume();
-    // World positions will be multiplied by this scale for the purposes of voxel indexing.
-    // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
-    // Higher values result in a voxel grid of a higher resolution; individual voxels would be smaller.
-    float voxelVolumeResolutionScale = 10.0f;
-    PolyVox::SimpleVolume<float> voxelVolume{{
-            worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{
-                (int)std::ceil(h * voxelVolumeResolutionScale),
-                (int)std::ceil(h * voxelVolumeResolutionScale),
-                (int)std::ceil(h * voxelVolumeResolutionScale)
-            },
-            worldPosToVoxelIndex(maxPos) + PolyVox::Vector3DInt32{
-                (int)std::ceil(h * voxelVolumeResolutionScale),
-                (int)std::ceil(h * voxelVolumeResolutionScale),
-                (int)std::ceil(h * voxelVolumeResolutionScale)
-            },
-        }};
-    PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal> surfaceMesh;
-    PolyVox::MarchingCubesSurfaceExtractor<PolyVox::SimpleVolume<float>> surfaceExtractor{
-        &voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh
-    };
 };

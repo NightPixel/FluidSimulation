@@ -24,24 +24,24 @@
     <ClCompile Include="OpenGLUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Program.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Randomizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ProgramBase.cpp">
+    <ClCompile Include="FluidSimulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FluidVisualizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FluidBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Simple.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Simple.frag">
       <Filter>Shaders</Filter>
     </None>
     <None Include="Water.frag">
@@ -50,12 +50,12 @@
     <None Include="Water.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Simple.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OpenGLUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Program.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Randomizer.h">
@@ -73,7 +73,13 @@
     <ClInclude Include="Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProgramBase.h">
+    <ClInclude Include="FluidSimulator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FluidVisualizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FluidBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

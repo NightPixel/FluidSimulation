@@ -1,18 +1,24 @@
-﻿#include "ProgramBase.h"
+﻿#include "FluidVisualizer.h"
 #include "OpenGLUtils.h"
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <PolyVoxCore/VertexTypes.h>
-#include <tuple>
 
-ProgramBase::ProgramBase(GLFWwindow* window)
-    : window(window)
+FluidVisualizer::FluidVisualizer(GLFWwindow* window)
+    : FluidSimulator(window),
+    voxelVolume({
+        worldPosToVoxelIndex(minPos) - PolyVox::Vector3DInt32{
+            (int)std::ceil(h * voxelVolumeResolutionScale),
+            (int)std::ceil(h * voxelVolumeResolutionScale),
+            (int)std::ceil(h * voxelVolumeResolutionScale)
+        },
+        worldPosToVoxelIndex(maxPos) + PolyVox::Vector3DInt32{
+            (int)std::ceil(h * voxelVolumeResolutionScale),
+            (int)std::ceil(h * voxelVolumeResolutionScale),
+            (int)std::ceil(h * voxelVolumeResolutionScale)
+        },
+    }),
+    surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
-    glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
-    antTweakBar = TwNewBar("Simulation settings");
-    TwDefine("GLOBAL fontsize=3");
-
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
@@ -26,6 +32,10 @@ ProgramBase::ProgramBase(GLFWwindow* window)
     glUniformMatrix4fv(glGetUniformLocation(simpleShaderProgram, "proj"), 1, GL_FALSE,
         glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
     );
+
+    // Set up fragment shader uniforms
+    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "minWorldPos"), 1, glm::value_ptr(minPos));
+    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "maxWorldPos"), 1, glm::value_ptr(maxPos));
 
     // Create a Vertex Array Object for the particle points
     glGenVertexArrays(1, &pointsVAO);
@@ -91,7 +101,7 @@ ProgramBase::ProgramBase(GLFWwindow* window)
     glVertexAttribPointer(meshMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
 }
 
-ProgramBase::~ProgramBase()
+FluidVisualizer::~FluidVisualizer()
 {
     glDeleteProgram(simpleShaderProgram);
     glDeleteShader(simpleFragmentShader);
@@ -107,58 +117,81 @@ ProgramBase::~ProgramBase()
     glDeleteVertexArrays(1, &pointsVAO);
 }
 
-void ProgramBase::onMouseMoved(float dxPos, float dyPos)
+// Draws a new frame.
+void FluidVisualizer::draw()
 {
-    const bool leftMouseButtonPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    const bool rightMouseButtonPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-
-    if (leftMouseButtonPressed == rightMouseButtonPressed)
-        return; // Neither is pressed, or both are pressed
-
-    if (leftMouseButtonPressed)
+    // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
+    fillVoxelVolume();
+    surfaceExtractor.execute();
+    const auto& lowerCorner = voxelVolume.getEnclosingRegion().getLowerCorner();
+    surfaceMesh.translateVertices({ (float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ() });
+    surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
+    const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
+    std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getRawVertexData();
+    for (auto& vert : vertices) // Clamp vertex locations to world boundaries
     {
-        float dTheta = -dxPos / (0.5f * windowSizeX);
-        float dPhi   = -dyPos / (0.5f * windowSizeY);
-        camera.rotate(dTheta, dPhi);
+        vert.position.setElements(
+            clamp(minPos.x + gridOffset.x, maxPos.x + gridOffset.x, vert.position.getX() + gridOffset.x),
+            clamp(minPos.y + gridOffset.y, maxPos.y + gridOffset.y, vert.position.getY() + gridOffset.y),
+            clamp(minPos.z + gridOffset.z, maxPos.z + gridOffset.z, vert.position.getZ() + gridOffset.z)
+        );
     }
-    if (rightMouseButtonPressed)
-    {
-        float dx =  2.0f * dxPos / (0.5f * windowSizeX);
-        float dy = -2.0f * dyPos / (0.5f * windowSizeY);
-        camera.pan(dx, dy);
-    }
+
+    const glm::mat4 view = camera.getViewMatrix();
+    glUseProgram(waterShaderProgram);
+    glUniformMatrix4fv(waterViewUniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniform3fv(waterCamUniform, 1, glm::value_ptr(camera.getPosition()));
+
+    // Draw surface mesh
+    glBindVertexArray(meshVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+
+    glUseProgram(simpleShaderProgram);
+    glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));
+
+    // Draw points
+    glBindVertexArray(pointsVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
+    glDrawArrays(GL_POINTS, 0, (GLsizei)std::size(r));
+
+    // Draw world bounds
+    glBufferData(GL_ARRAY_BUFFER, sizeof(worldBoundsVertices), worldBoundsVertices, GL_STREAM_DRAW);
+    glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)std::size(worldBoundsVertices));
 }
 
-void ProgramBase::onMouseScrolled(float yOffset)
+PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
-    camera.zoom(yOffset / 30.0f);
+    return {
+        (int)((worldPos.x - gridOffset.x) * voxelVolumeResolutionScale),
+        (int)((worldPos.y - gridOffset.y) * voxelVolumeResolutionScale),
+        (int)((worldPos.z - gridOffset.z) * voxelVolumeResolutionScale)
+    };
 }
 
-void ProgramBase::onKeypress(int key, int action)
+glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const
 {
-    printf("K: %i A: %i\n", key, action);
-    switch (key)
-    {
-    case 'W':
-        holdForward = action != GLFW_RELEASE;
-        break;
-    case 'S':
-        holdBackward = action != GLFW_RELEASE;
-        break;
-    case 'A':
-        holdLeft = action != GLFW_RELEASE;
-        break;
-    case 'D':
-        holdRight = action != GLFW_RELEASE;
-        break;
-    case 32: // Space
-        holdUp = action != GLFW_RELEASE;
-        break;
-    case 341: // Left control
-        holdDown = action != GLFW_RELEASE;
-        break;
-    case 340: // Left shift
-        holdShift = action != GLFW_RELEASE;
-        break;
-    }
+    static const float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
+
+    return {
+        voxelX * invVoxelVolumeResolutionScale + gridOffset.x,
+        voxelY * invVoxelVolumeResolutionScale + gridOffset.y,
+        voxelZ * invVoxelVolumeResolutionScale + gridOffset.z,
+    };
+}
+
+void FluidVisualizer::fillVoxelVolume()
+{
+    const PolyVox::Region volumeRegion = voxelVolume.getEnclosingRegion();
+    const PolyVox::Vector3DInt32& lowerCorner = volumeRegion.getLowerCorner();
+    const PolyVox::Vector3DInt32& upperCorner = volumeRegion.getUpperCorner();
+
+#pragma omp parallel for
+    for (int z = lowerCorner.getZ(); z <= upperCorner.getZ(); z++)
+        for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
+            for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
+                voxelVolume.setVoxelAt(x, y, z, calcDensity(voxelIndexToWorldPos(x, y, z)));
 }
