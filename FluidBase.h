@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
+#include <PolyVoxCore/VertexTypes.h>
+#include <vector>
 
 class FluidBase
 {
@@ -31,4 +33,7 @@ protected:
     bool holdUp = false;
     bool holdDown = false;
     bool holdShift = false;
+
+    std::vector<glm::vec3> objectPositions;
+    std::vector<PolyVox::PositionMaterialNormal> objectVertices;
 };

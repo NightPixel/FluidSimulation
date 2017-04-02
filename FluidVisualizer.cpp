@@ -149,6 +149,10 @@ void FluidVisualizer::draw()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
     glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
 
+    // Draw obstacle
+    glBufferData(GL_ARRAY_BUFFER, objectVertices.size() * sizeof(PolyVox::PositionMaterialNormal), objectVertices.data(), GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)objectVertices.size());
+
     glUseProgram(simpleShaderProgram);
     glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));
 
