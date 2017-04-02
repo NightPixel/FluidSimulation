@@ -40,7 +40,7 @@ FluidBase::FluidBase(GLFWwindow* window)
                 float ny = attrib.normals[3 * idx.normal_index + 1];
                 float nz = attrib.normals[3 * idx.normal_index + 2];
                 printf("Vertex [%i](%f, %f, %f), Normal [%i](%f, %f, %f)\n", idx.vertex_index, vx, vy, vz, idx.normal_index, nx, ny, nz);
-                objectVertices.emplace_back(PolyVox::Vector3DFloat{ vx, vy, vz }, PolyVox::Vector3DFloat{ nx, ny, nz }, shapes[s].mesh.material_ids[f]);
+                objectVertices.emplace_back(PolyVox::Vector3DFloat{ vx, vy, vz }, PolyVox::Vector3DFloat{ nx, ny, nz }, (float)shapes[s].mesh.material_ids[f]);
                 //float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
                 //float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
             }
