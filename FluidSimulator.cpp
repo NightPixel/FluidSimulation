@@ -80,6 +80,9 @@ void FluidSimulator::update()
     fillParticleGrid();
 #endif
 
+    // Copy current positions to previous positions array
+    std::copy(std::begin(r), std::end(r), std::begin(rPrev));
+
     float rho[particleCount] = {}; // Particle densities
     float p[particleCount] = {}; // Particle pressure
     // First, calculate density and pressure at each particle position
@@ -143,6 +146,9 @@ void FluidSimulator::resetParticles()
             for (int x = 0; x != cubeSize; ++x)
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
                     glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
+
+    // Copy current positions to previous positions array
+    std::copy(std::begin(r), std::end(r), std::begin(rPrev));
 
     for (auto& vel : v)
         vel = glm::vec3{};

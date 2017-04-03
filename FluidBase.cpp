@@ -14,10 +14,10 @@ FluidBase::FluidBase(GLFWwindow* window)
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, "data/cube.obj", "data/");
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, "data/cube.obj", "data/", true);
 
-    for (size_t v = 0; v < attrib.vertices.size(); v += 3)
-        objectPositions.emplace_back(attrib.vertices[v], attrib.vertices[v + 1], attrib.vertices[v + 2]);
+    /*for (size_t v = 0; v < attrib.vertices.size(); v += 3)
+        objectPositions.emplace_back(attrib.vertices[v], attrib.vertices[v + 1], attrib.vertices[v + 2]);*/
 
     // Loop over shapes
     for (size_t s = 0; s < shapes.size(); s++)
@@ -26,13 +26,19 @@ FluidBase::FluidBase(GLFWwindow* window)
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
         {
-            int fv = shapes[s].mesh.num_face_vertices[f];
+            // tinyobj::LoadObj()s 'triangulate' parameter was set to true,
+            // so we should only get faces with three vertices
+            assert(shapes[s].mesh.num_face_vertices[f] == 3);
+            glm::vec3 positions[3];
+            glm::vec3 normals[3];
 
+            int fv = shapes[s].mesh.num_face_vertices[f];
             // Loop over vertices in the face.
             for (size_t v = 0; v < fv; v++)
             {
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
                 float vx = attrib.vertices[3 * idx.vertex_index + 0];
                 float vy = attrib.vertices[3 * idx.vertex_index + 1];
                 float vz = attrib.vertices[3 * idx.vertex_index + 2];
@@ -40,10 +46,14 @@ FluidBase::FluidBase(GLFWwindow* window)
                 float ny = attrib.normals[3 * idx.normal_index + 1];
                 float nz = attrib.normals[3 * idx.normal_index + 2];
                 printf("Vertex [%i](%f, %f, %f), Normal [%i](%f, %f, %f)\n", idx.vertex_index, vx, vy, vz, idx.normal_index, nx, ny, nz);
+
+                positions[v] = glm::vec3{ vx, vy, vz };
+                normals[v] = glm::vec3{ nx, ny, nz };
                 objectVertices.emplace_back(PolyVox::Vector3DFloat{ vx, vy, vz }, PolyVox::Vector3DFloat{ nx, ny, nz }, (float)shapes[s].mesh.material_ids[f]);
-                //float tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                //float ty = attrib.texcoords[2 * idx.texcoord_index + 1];
             }
+
+            objectTriangles.emplace_back(positions, glm::normalize(normals[0] + normals[1] + normals[2]));
+
             index_offset += fv;
 
             // per-face material

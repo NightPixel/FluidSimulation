@@ -78,6 +78,8 @@ protected:
     glm::vec3 r[particleCount];
     // Particle velocities
     glm::vec3 v[particleCount];
+    // Particle positions in the previous frame
+    glm::vec3 rPrev[particleCount];
 
     float calcDensity(size_t particleId) const;
     float calcDensity(const glm::vec3& pos) const;

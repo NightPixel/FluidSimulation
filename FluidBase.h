@@ -34,6 +34,17 @@ protected:
     bool holdDown = false;
     bool holdShift = false;
 
-    std::vector<glm::vec3> objectPositions;
+    struct Triangle
+    {
+        glm::vec3 positions[3];
+        glm::vec3 normal;
+
+        Triangle(glm::vec3 pos[], const glm::vec3& norm)
+            : normal(norm)
+        {
+            std::copy(pos, pos + 3, std::begin(positions));
+        }
+    };
+    std::vector<Triangle> objectTriangles;
     std::vector<PolyVox::PositionMaterialNormal> objectVertices;
 };
