@@ -34,6 +34,8 @@ FluidSimulator::FluidSimulator(GLFWwindow* window)
 
     // Fill kernel lookup tables
     fillKernelLookupTables();
+
+    fillTriangleGrid();
 }
 
 // Updates the state of the program.
@@ -169,7 +171,6 @@ void FluidSimulator::fillKernelLookupTables()
     }
 }
 
-
 float FluidSimulator::calcDensity(size_t particleId) const
 {
     return calcDensity(r[particleId]);
@@ -295,9 +296,152 @@ void FluidSimulator::fillParticleGrid()
         // Subtract EPSILON to make sure values exactly at grid edge don't lead to incorrect array slot
         particleGrid
             [clamp(0, gridSizeX - 1, (int)((pos.x - (minPos.x + gridOffset.x) - EPSILON) / h))]
-        [clamp(0, gridSizeY - 1, (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h))]
-        [clamp(0, gridSizeZ - 1, (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h))].push_back(i);
+            [clamp(0, gridSizeY - 1, (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h))]
+            [clamp(0, gridSizeZ - 1, (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h))].push_back(i);
     }
+}
+
+void FluidSimulator::fillTriangleGrid()
+{
+    // Pre-compute the bounding boxes for each grid cell.
+    // Each grid cell's bounding box is described by a (grid center, half edge lengths) vector pair.
+    std::pair<glm::vec3, glm::vec3> gridCellBoundingBoxes[gridSizeX][gridSizeY][gridSizeZ];
+
+    for (size_t x = 0; x != gridSizeX; ++x)
+        for (size_t y = 0; y != gridSizeY; ++y)
+            for (size_t z = 0; z != gridSizeZ; ++z)
+            {
+                const glm::vec3 lowerCorner{
+                    x * h + (minPos.x + gridOffset.x),
+                    y * h + (minPos.y + gridOffset.y),
+                    z * h + (minPos.z + gridOffset.z)
+                };
+                const glm::vec3 upperCorner{
+                    (x + 1) * h + (minPos.x + gridOffset.x),
+                    (y + 1) * h + (minPos.y + gridOffset.y),
+                    (z + 1) * h + (minPos.z + gridOffset.z)
+                };
+
+                const glm::vec3 boxCenter = (lowerCorner + upperCorner) / 2.0f;
+                const glm::vec3 halfLengths = (upperCorner - lowerCorner) / 2.0f;
+
+                gridCellBoundingBoxes[x][y][z] = std::make_pair(boxCenter, halfLengths);
+            }
+
+    // For each triangle, we find the grid cells in which its bounding box resides.
+    // For each of these grid cells, we do a triangle-box intersection test;
+    // if the grid cell's box intersects the triangle, we store a pointer to the triangle in that grid cell.
+    for (auto& triangle : objectTriangles)
+    {
+        // Each triangle's bounding box is described by a (lower corner, upper corner) vector pair.
+        // Note that this is a different description than the grid cell's bounding boxes!
+        const auto bounds = triangle.getBoundingBox();
+
+        // Convert the triangle bounding box to grid cells
+        int minGridX = (int)((bounds.first.x - (minPos.x + gridOffset.x) - EPSILON) / h);
+        int minGridY = (int)((bounds.first.y - (minPos.y + gridOffset.y) - EPSILON) / h);
+        int minGridZ = (int)((bounds.first.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+
+        int maxGridX = (int)((bounds.second.x - (minPos.x + gridOffset.x) - EPSILON) / h);
+        int maxGridY = (int)((bounds.second.y - (minPos.y + gridOffset.y) - EPSILON) / h);
+        int maxGridZ = (int)((bounds.second.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+
+        // For each grid cell that overlaps with the triangle's bounding box...
+        for (size_t x = minGridX; x <= maxGridX; ++x)
+            for (size_t y = minGridY; y <= maxGridY; ++y)
+                for (size_t z = minGridZ; z <= maxGridZ; ++z)
+                {
+                    const glm::vec3& gridCellCenter = gridCellBoundingBoxes[x][y][z].first;
+                    const glm::vec3& gridCellHalfLengths = gridCellBoundingBoxes[x][y][z].second;
+
+                    // ...if the triangle actually intersects with the grid cell...
+                    if (triangleBoxIntersection(triangle, gridCellCenter, gridCellHalfLengths))
+                    {
+                        // ...store the triangle in that cell.
+                        triangleGrid[x][y][z].push_back(&triangle);
+                        printf("(%i, %i, %i) (%i, %i, %i)\n", minGridX, minGridY, minGridZ, maxGridX, maxGridY, maxGridZ);
+                    }
+                }
+    }
+}
+
+bool FluidSimulator::triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize) const
+{
+    // First, we create a new, translated triangle such that the
+    // box we're testing it against is centered around the origin.
+    const Triangle translatedTriangle{
+        triangle.positions[0] - boxCenter,
+        triangle.positions[1] - boxCenter,
+        triangle.positions[2] - boxCenter,
+        triangle.normal
+    };
+
+    // Each triangle's bounding box is described by a (lower corner, upper corner) vector pair.
+    glm::vec3 minCoords, maxCoords;
+    std::tie(minCoords, maxCoords) = translatedTriangle.getBoundingBox();
+
+    // 1. Three tests: triangle AABB against box
+    if (minCoords.x > boxHalfSize.x || maxCoords.x < -boxHalfSize.x ||
+        minCoords.y > boxHalfSize.y || maxCoords.y < -boxHalfSize.y ||
+        minCoords.z > boxHalfSize.z || maxCoords.z < -boxHalfSize.z)
+        return false;
+
+    // 2. One test: triangle plane against box
+    if (!planeBoxIntersection(translatedTriangle.normal, translatedTriangle.positions[0], boxHalfSize))
+        return false;
+
+    // 3. Nine tests: each combination of some global axis crossed with a triangle edge
+    const glm::vec3 axes[3] = {
+        {1.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f}
+    };
+    const glm::vec3 edges[3] = {
+        translatedTriangle.positions[1] - translatedTriangle.positions[0],
+        translatedTriangle.positions[2] - translatedTriangle.positions[1],
+        translatedTriangle.positions[0] - translatedTriangle.positions[2]
+    };
+
+    for (size_t axis = 0; axis != 3; ++axis)
+        for (size_t edge = 0; edge != 3; ++edge)
+        {
+            const glm::vec3 a = glm::cross(axes[axis], edges[edge]);
+            // Project the triangle vertices onto a
+            const float p0 = glm::dot(a, translatedTriangle.positions[0]);
+            const float p1 = glm::dot(a, translatedTriangle.positions[1]);
+            const float p2 = glm::dot(a, translatedTriangle.positions[2]);
+            // Calculate the "radius" of the box projected on a
+            const float r = boxHalfSize.x * abs(a.x) + boxHalfSize.y * abs(a.y) + boxHalfSize.z * abs(a.z);
+            if (std::min({p0, p1, p2}) > r || std::max({p0, p1, p2}) < -r)
+                return false;
+        }
+
+    return true;
+}
+
+bool FluidSimulator::planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& maxBox) const
+{
+    glm::vec3 vMin, vMax;
+    for (int q = 0; q != 2; ++q)
+    {
+        const float v = vertex[q];
+        if (normal[q] > 0.0f)
+        {
+            vMin[q] = -maxBox[q] - v;
+            vMax[q] =  maxBox[q] - v;
+        }
+        else
+        {
+            vMin[q] =  maxBox[q] - v;
+            vMax[q] = -maxBox[q] - v;
+        }
+    }
+    if (glm::dot(normal, vMin) > 0.0f)
+        return false;
+    if (glm::dot(normal, vMax) >= 0.0f)
+        return true;
+
+    return false;
 }
 
 FluidSimulator::GridCellNeighborhood FluidSimulator::getAdjacentCells(const glm::vec3& pos) const

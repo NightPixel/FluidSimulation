@@ -52,7 +52,7 @@ FluidBase::FluidBase(GLFWwindow* window)
                 objectVertices.emplace_back(PolyVox::Vector3DFloat{ vx, vy, vz }, PolyVox::Vector3DFloat{ nx, ny, nz }, (float)shapes[s].mesh.material_ids[f]);
             }
 
-            objectTriangles.emplace_back(positions, glm::normalize(normals[0] + normals[1] + normals[2]));
+            objectTriangles.emplace_back(positions[0], positions[1], positions[2], glm::normalize(normals[0] + normals[1] + normals[2]));
 
             index_offset += fv;
 

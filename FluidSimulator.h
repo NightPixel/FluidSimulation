@@ -100,8 +100,12 @@ protected:
     static constexpr int gridSizeY = ceiling((maxPosY - minPosY) / h);
     static constexpr int gridSizeZ = ceiling((maxPosZ - minPosZ) / h);
     std::vector<size_t> particleGrid[gridSizeX][gridSizeY][gridSizeZ];
-
     void fillParticleGrid();
+
+    std::vector<Triangle*> triangleGrid[gridSizeX][gridSizeY][gridSizeZ];
+    void fillTriangleGrid();
+    bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize) const;
+    bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize) const;
 
     struct GridCellNeighborhood
     {
