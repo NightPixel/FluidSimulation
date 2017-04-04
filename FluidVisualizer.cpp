@@ -65,15 +65,16 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
     waterCamUniform = glGetUniformLocation(waterShaderProgram, "camPos");
     glUniform3fv(glGetUniformLocation(waterShaderProgram, "lightPos"), 1, glm::value_ptr(glm::vec3{ 3.0f, 3.0f, 3.0f }));
 
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "ambientSceneColor"), 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.5f }));
+    waterAmbientUniform = glGetUniformLocation(waterShaderProgram, "ambientMaterialColor");
     glUniform3fv(glGetUniformLocation(waterShaderProgram, "ambientLightColor"), 1, glm::value_ptr(glm::vec3{ 0.1f, 0.1f, 0.1f }));
 
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "diffuseMaterialColor"), 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.95f }));
+    waterDiffuseUniform = glGetUniformLocation(waterShaderProgram, "diffuseMaterialColor");
     glUniform3fv(glGetUniformLocation(waterShaderProgram, "diffuseLightColor"), 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
 
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "specularMaterialColor"), 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
+    waterSpecularUniform = glGetUniformLocation(waterShaderProgram, "specularMaterialColor");
     glUniform3fv(glGetUniformLocation(waterShaderProgram, "specularLightColor"), 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
-    glUniform1i(glGetUniformLocation(waterShaderProgram, "shininess"), 32);
+
+    waterShininessUniform = glGetUniformLocation(waterShaderProgram, "shininess");
 
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &meshVAO);
@@ -142,6 +143,12 @@ void FluidVisualizer::draw()
     glUniformMatrix4fv(waterViewUniform, 1, GL_FALSE, glm::value_ptr(view));
     glUniform3fv(waterCamUniform, 1, glm::value_ptr(camera.getPosition()));
 
+
+    glUniform3fv(waterAmbientUniform, 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.5f }));
+    glUniform3fv(waterDiffuseUniform, 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.95f }));
+    glUniform3fv(waterSpecularUniform, 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
+    glUniform1f(waterShininessUniform, 32.0f);
+
     // Draw surface mesh
     glBindVertexArray(meshVAO);
     glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
@@ -149,9 +156,16 @@ void FluidVisualizer::draw()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
     glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
 
-    // Draw obstacle
-    glBufferData(GL_ARRAY_BUFFER, objectVertices.size() * sizeof(PolyVox::PositionMaterialNormal), objectVertices.data(), GL_STREAM_DRAW);
-    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)objectVertices.size());
+    // Draw models
+    for (const auto& model : models)
+    {
+        glUniform3fv(waterAmbientUniform, 1, glm::value_ptr(model.ambientColor));
+        glUniform3fv(waterDiffuseUniform, 1, glm::value_ptr(model.diffuseColor));
+        glUniform3fv(waterSpecularUniform, 1, glm::value_ptr(model.specularColor));
+        glUniform1f(waterShininessUniform, model.specularExponent);
+        glBufferData(GL_ARRAY_BUFFER, model.vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), model.vertexData.data(), GL_STREAM_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)model.vertexData.size());
+    }
 
     glUseProgram(simpleShaderProgram);
     glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));

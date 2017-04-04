@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Geometry.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OpenGLUtils.cpp" />
     <ClCompile Include="FluidSimulator.cpp" />
@@ -95,6 +96,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Definitions.h" />
+    <ClInclude Include="Geometry.h" />
     <ClInclude Include="Kernels.h" />
     <ClInclude Include="OpenGLUtils.h" />
     <ClInclude Include="FluidSimulator.h" />

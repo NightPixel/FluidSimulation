@@ -1,6 +1,7 @@
 ﻿#include "FluidSimulator.h"
 #include "Kernels.h"
 #include "Definitions.h"
+#include <tuple>
 
 FluidSimulator::FluidSimulator(GLFWwindow* window)
     : FluidBase(window)
@@ -117,6 +118,8 @@ void FluidSimulator::update()
 #pragma omp parallel for
     for (int i = 0; i < particleCount; ++i)
     {
+        glm::vec3 oldPos = r[i];
+
         glm::vec3 a = forces[i] / rho[i]; // Acceleration
         // Semi-implicit Euler integration (TODO: better integration?)
         v[i] += a * dt;
@@ -331,37 +334,40 @@ void FluidSimulator::fillTriangleGrid()
     // For each triangle, we find the grid cells in which its bounding box resides.
     // For each of these grid cells, we do a triangle-box intersection test;
     // if the grid cell's box intersects the triangle, we store a pointer to the triangle in that grid cell.
-    for (auto& triangle : objectTriangles)
+    for (auto& model : models)
     {
-        // Each triangle's bounding box is described by a (lower corner, upper corner) vector pair.
-        // Note that this is a different description than the grid cell's bounding boxes!
-        const auto bounds = triangle.getBoundingBox();
+        for (auto& triangle : model.triangles)
+        {
+            // Each triangle's bounding box is described by a (lower corner, upper corner) vector pair.
+            // Note that this is a different description than the grid cell's bounding boxes!
+            const auto bounds = triangle.getBoundingBox();
 
-        // Convert the triangle bounding box to grid cells
-        int minGridX = (int)((bounds.first.x - (minPos.x + gridOffset.x) - EPSILON) / h);
-        int minGridY = (int)((bounds.first.y - (minPos.y + gridOffset.y) - EPSILON) / h);
-        int minGridZ = (int)((bounds.first.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+            // Convert the triangle bounding box to grid cells
+            int minGridX = (int)((bounds.first.x - (minPos.x + gridOffset.x) - EPSILON) / h);
+            int minGridY = (int)((bounds.first.y - (minPos.y + gridOffset.y) - EPSILON) / h);
+            int minGridZ = (int)((bounds.first.z - (minPos.z + gridOffset.z) - EPSILON) / h);
 
-        int maxGridX = (int)((bounds.second.x - (minPos.x + gridOffset.x) - EPSILON) / h);
-        int maxGridY = (int)((bounds.second.y - (minPos.y + gridOffset.y) - EPSILON) / h);
-        int maxGridZ = (int)((bounds.second.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+            int maxGridX = (int)((bounds.second.x - (minPos.x + gridOffset.x) - EPSILON) / h);
+            int maxGridY = (int)((bounds.second.y - (minPos.y + gridOffset.y) - EPSILON) / h);
+            int maxGridZ = (int)((bounds.second.z - (minPos.z + gridOffset.z) - EPSILON) / h);
 
-        // For each grid cell that overlaps with the triangle's bounding box...
-        for (size_t x = minGridX; x <= maxGridX; ++x)
-            for (size_t y = minGridY; y <= maxGridY; ++y)
-                for (size_t z = minGridZ; z <= maxGridZ; ++z)
-                {
-                    const glm::vec3& gridCellCenter = gridCellBoundingBoxes[x][y][z].first;
-                    const glm::vec3& gridCellHalfLengths = gridCellBoundingBoxes[x][y][z].second;
-
-                    // ...if the triangle actually intersects with the grid cell...
-                    if (triangleBoxIntersection(triangle, gridCellCenter, gridCellHalfLengths))
+            // For each grid cell that overlaps with the triangle's bounding box...
+            for (size_t x = minGridX; x <= maxGridX; ++x)
+                for (size_t y = minGridY; y <= maxGridY; ++y)
+                    for (size_t z = minGridZ; z <= maxGridZ; ++z)
                     {
-                        // ...store the triangle in that cell.
-                        triangleGrid[x][y][z].push_back(&triangle);
-                        printf("(%i, %i, %i) (%i, %i, %i)\n", minGridX, minGridY, minGridZ, maxGridX, maxGridY, maxGridZ);
+                        const glm::vec3& gridCellCenter = gridCellBoundingBoxes[x][y][z].first;
+                        const glm::vec3& gridCellHalfLengths = gridCellBoundingBoxes[x][y][z].second;
+
+                        // ...if the triangle actually intersects with the grid cell...
+                        if (triangleBoxIntersection(triangle, gridCellCenter, gridCellHalfLengths))
+                        {
+                            // ...store the triangle in that cell.
+                            triangleGrid[x][y][z].push_back(&triangle);
+                            printf("(%i, %i, %i) (%i, %i, %i)\n", minGridX, minGridY, minGridZ, maxGridX, maxGridY, maxGridZ);
+                        }
                     }
-                }
+        }
     }
 }
 

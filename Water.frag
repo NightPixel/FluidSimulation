@@ -9,7 +9,7 @@ out vec4 outColor;
 uniform vec3 camPos;
 uniform vec3 lightPos;
 
-uniform vec3 ambientSceneColor;
+uniform vec3 ambientMaterialColor;
 uniform vec3 ambientLightColor;
 
 uniform vec3 diffuseMaterialColor;
@@ -17,11 +17,11 @@ uniform vec3 diffuseLightColor;
 
 uniform vec3 specularMaterialColor;
 uniform vec3 specularLightColor;
-uniform int shininess;
+uniform float shininess;
 
 void main()
 {
-    vec3 ambient = ambientSceneColor * ambientLightColor;
+    vec3 ambient = ambientMaterialColor * ambientLightColor;
 
     vec3 N = Normal;
     vec3 L = normalize(lightPos - WorldPos);

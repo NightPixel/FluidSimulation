@@ -1,6 +1,4 @@
 ﻿#include "FluidBase.h"
-#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
-#include <tiny_obj_loader.h>
 
 FluidBase::FluidBase(GLFWwindow* window)
     : window(window)
@@ -9,57 +7,14 @@ FluidBase::FluidBase(GLFWwindow* window)
     antTweakBar = TwNewBar("Simulation settings");
     TwDefine("GLOBAL fontsize=3");
 
+    addModelsFromOBJFile("cube.obj", glm::vec3{-1.0f, -1.0f, -1.0f}, glm::vec3{45.0f, 75.0f, 0.0f}, glm::vec3{1.5f, 0.5f, 0.5f});
+    addModelsFromOBJFile("cube.obj", glm::vec3{0.3f, 1.0f, 0.3f}, glm::vec3{-25.0f, -30.0f, 100.0f}, glm::vec3{0.2f, 0.3f, 0.4f});
+}
 
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, "data/cube.obj", "data/", true);
-
-    /*for (size_t v = 0; v < attrib.vertices.size(); v += 3)
-        objectPositions.emplace_back(attrib.vertices[v], attrib.vertices[v + 1], attrib.vertices[v + 2]);*/
-
-    // Loop over shapes
-    for (size_t s = 0; s < shapes.size(); s++)
-    {
-        // Loop over faces(polygon)
-        size_t index_offset = 0;
-        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
-        {
-            // tinyobj::LoadObj()s 'triangulate' parameter was set to true,
-            // so we should only get faces with three vertices
-            assert(shapes[s].mesh.num_face_vertices[f] == 3);
-            glm::vec3 positions[3];
-            glm::vec3 normals[3];
-
-            int fv = shapes[s].mesh.num_face_vertices[f];
-            // Loop over vertices in the face.
-            for (size_t v = 0; v < fv; v++)
-            {
-                // access to vertex
-                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-
-                float vx = attrib.vertices[3 * idx.vertex_index + 0];
-                float vy = attrib.vertices[3 * idx.vertex_index + 1];
-                float vz = attrib.vertices[3 * idx.vertex_index + 2];
-                float nx = attrib.normals[3 * idx.normal_index + 0];
-                float ny = attrib.normals[3 * idx.normal_index + 1];
-                float nz = attrib.normals[3 * idx.normal_index + 2];
-                printf("Vertex [%i](%f, %f, %f), Normal [%i](%f, %f, %f)\n", idx.vertex_index, vx, vy, vz, idx.normal_index, nx, ny, nz);
-
-                positions[v] = glm::vec3{ vx, vy, vz };
-                normals[v] = glm::vec3{ nx, ny, nz };
-                objectVertices.emplace_back(PolyVox::Vector3DFloat{ vx, vy, vz }, PolyVox::Vector3DFloat{ nx, ny, nz }, (float)shapes[s].mesh.material_ids[f]);
-            }
-
-            objectTriangles.emplace_back(positions[0], positions[1], positions[2], glm::normalize(normals[0] + normals[1] + normals[2]));
-
-            index_offset += fv;
-
-            // per-face material
-            shapes[s].mesh.material_ids[f];
-        }
-    }
+void FluidBase::addModelsFromOBJFile(const std::string& fileName, const glm::vec3& offset, const glm::vec3& rotation, const glm::vec3& scale)
+{
+    auto newModels = loadOBJFile(fileName, offset, rotation, scale);
+    models.insert(models.end(), newModels.begin(), newModels.end());
 }
 
 void FluidBase::onMouseMoved(float dxPos, float dyPos)

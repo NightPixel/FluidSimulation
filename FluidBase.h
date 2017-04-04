@@ -1,17 +1,19 @@
 ﻿#pragma once
 
 #include "Camera.h"
+#include "Geometry.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
-#include <PolyVoxCore/VertexTypes.h>
 #include <vector>
-#include <algorithm>
 
 class FluidBase
 {
 public:
     explicit FluidBase(GLFWwindow* window);
+
+    void addModelsFromOBJFile(const std::string& fileName,
+        const glm::vec3& offset = {}, const glm::vec3& rotation = {}, const glm::vec3& scale = glm::vec3{1.0f, 1.0f, 1.0f});
 
     // Called when the mouse cursor is moved.
     void onMouseMoved(float dxPos, float dyPos);
@@ -35,35 +37,5 @@ protected:
     bool holdDown = false;
     bool holdShift = false;
 
-    struct Triangle
-    {
-        glm::vec3 positions[3];
-        glm::vec3 normal;
-
-        Triangle(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& pos2, const glm::vec3& norm)
-            : normal(norm)
-        {
-            positions[0] = pos0;
-            positions[1] = pos1;
-            positions[2] = pos2;
-        }
-
-        std::pair<glm::vec3, glm::vec3> getBoundingBox() const
-        {
-            return std::make_pair(
-                glm::vec3{
-                    std::min({positions[0].x, positions[1].x, positions[2].x}),
-                    std::min({positions[0].y, positions[1].y, positions[2].y}),
-                    std::min({positions[0].z, positions[1].z, positions[2].z}),
-                },
-                glm::vec3{
-                    std::max({positions[0].x, positions[1].x, positions[2].x}),
-                    std::max({positions[0].y, positions[1].y, positions[2].y}),
-                    std::max({positions[0].z, positions[1].z, positions[2].z}),
-                }
-            );
-        }
-    };
-    std::vector<Triangle> objectTriangles;
-    std::vector<PolyVox::PositionMaterialNormal> objectVertices;
+    std::vector<Model> models;
 };

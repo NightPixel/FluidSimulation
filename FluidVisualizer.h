@@ -29,7 +29,7 @@ private:
     GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
     GLuint waterVertexShader, waterFragmentShader, waterShaderProgram;
     GLint simpleViewUniform, waterViewUniform;
-    GLint waterCamUniform;
+    GLint waterCamUniform, waterAmbientUniform, waterDiffuseUniform, waterSpecularUniform, waterShininessUniform;
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
     glm::vec3 voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const;
