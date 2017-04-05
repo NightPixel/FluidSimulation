@@ -47,13 +47,13 @@
     <None Include="Simple.vert">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Water.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Water.vert">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Simple.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Phong.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Phong.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

@@ -16,14 +16,14 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
             (int)std::ceil(h * voxelVolumeResolutionScale),
             (int)std::ceil(h * voxelVolumeResolutionScale)
         },
-    }),
-    surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
+}),
+surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
 
-    std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", { { 0, "outColor" } });
+    std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", {{ 0, "outColor" }});
     glUseProgram(simpleShaderProgram);
 
     // Set up model, view, projection matrices
@@ -51,30 +51,30 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
     glEnableVertexAttribArray(pointsPosAttrib);
     glVertexAttribPointer(pointsPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
 
-    std::tie(waterVertexShader, waterFragmentShader, waterShaderProgram) = createShaderProgram("Water.vert", "Water.frag", { { 0, "outColor" } });
-    glUseProgram(waterShaderProgram);
+    std::tie(phongVertexShader, phongFragmentShader, phongShaderProgram) = createShaderProgram("Phong.vert", "Phong.frag", {{ 0, "outColor" }});
+    glUseProgram(phongShaderProgram);
 
     // Set up model, view, projection matrices
-    glUniformMatrix4fv(glGetUniformLocation(waterShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
-    waterViewUniform = glGetUniformLocation(waterShaderProgram, "view");
-    glUniformMatrix4fv(glGetUniformLocation(waterShaderProgram, "proj"), 1, GL_FALSE,
+    glUniformMatrix4fv(glGetUniformLocation(phongShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    phongViewUniform = glGetUniformLocation(phongShaderProgram, "view");
+    glUniformMatrix4fv(glGetUniformLocation(phongShaderProgram, "proj"), 1, GL_FALSE,
         glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
     );
 
     // Set up fragment shader uniforms
-    waterCamUniform = glGetUniformLocation(waterShaderProgram, "camPos");
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "lightPos"), 1, glm::value_ptr(glm::vec3{ 3.0f, 3.0f, 3.0f }));
+    phongCamUniform = glGetUniformLocation(phongShaderProgram, "camPos");
+    glUniform3fv(glGetUniformLocation(phongShaderProgram, "lightPos"), 1, glm::value_ptr(glm::vec3{3.0f, 3.0f, 3.0f}));
 
-    waterAmbientUniform = glGetUniformLocation(waterShaderProgram, "ambientMaterialColor");
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "ambientLightColor"), 1, glm::value_ptr(glm::vec3{ 0.1f, 0.1f, 0.1f }));
+    phongAmbientUniform = glGetUniformLocation(phongShaderProgram, "ambientMaterialColor");
+    glUniform3fv(glGetUniformLocation(phongShaderProgram, "ambientLightColor"), 1, glm::value_ptr(glm::vec3{0.1f, 0.1f, 0.1f}));
 
-    waterDiffuseUniform = glGetUniformLocation(waterShaderProgram, "diffuseMaterialColor");
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "diffuseLightColor"), 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
+    phongDiffuseUniform = glGetUniformLocation(phongShaderProgram, "diffuseMaterialColor");
+    glUniform3fv(glGetUniformLocation(phongShaderProgram, "diffuseLightColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
 
-    waterSpecularUniform = glGetUniformLocation(waterShaderProgram, "specularMaterialColor");
-    glUniform3fv(glGetUniformLocation(waterShaderProgram, "specularLightColor"), 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
+    phongSpecularUniform = glGetUniformLocation(phongShaderProgram, "specularMaterialColor");
+    glUniform3fv(glGetUniformLocation(phongShaderProgram, "specularLightColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
 
-    waterShininessUniform = glGetUniformLocation(waterShaderProgram, "shininess");
+    phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
 
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &meshVAO);
@@ -91,13 +91,13 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
     //    (x, y, z)-position (3 floats)
     //    (x, y, z)-normal   (3 floats)
     //    material           (1 float)
-    GLint meshPosAttrib = glGetAttribLocation(waterShaderProgram, "position");
+    GLint meshPosAttrib = glGetAttribLocation(phongShaderProgram, "position");
     glEnableVertexAttribArray(meshPosAttrib);
     glVertexAttribPointer(meshPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-    GLint meshNormAttrib = glGetAttribLocation(waterShaderProgram, "normal");
+    GLint meshNormAttrib = glGetAttribLocation(phongShaderProgram, "normal");
     glEnableVertexAttribArray(meshNormAttrib);
     glVertexAttribPointer(meshNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-    GLint meshMatAttrib = glGetAttribLocation(waterShaderProgram, "material");
+    GLint meshMatAttrib = glGetAttribLocation(phongShaderProgram, "material");
     glEnableVertexAttribArray(meshMatAttrib);
     glVertexAttribPointer(meshMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
 }
@@ -107,9 +107,9 @@ FluidVisualizer::~FluidVisualizer()
     glDeleteProgram(simpleShaderProgram);
     glDeleteShader(simpleFragmentShader);
     glDeleteShader(simpleVertexShader);
-    glDeleteProgram(waterShaderProgram);
-    glDeleteShader(waterFragmentShader);
-    glDeleteShader(waterVertexShader);
+    glDeleteProgram(phongShaderProgram);
+    glDeleteShader(phongFragmentShader);
+    glDeleteShader(phongVertexShader);
 
     glDeleteBuffers(1, &meshEBO);
     glDeleteBuffers(1, &meshVBO);
@@ -125,7 +125,7 @@ void FluidVisualizer::draw()
     fillVoxelVolume();
     surfaceExtractor.execute();
     const auto& lowerCorner = voxelVolume.getEnclosingRegion().getLowerCorner();
-    surfaceMesh.translateVertices({ (float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ() });
+    surfaceMesh.translateVertices({(float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ()});
     surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
     const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
     std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getRawVertexData();
@@ -139,15 +139,15 @@ void FluidVisualizer::draw()
     }
 
     const glm::mat4 view = camera.getViewMatrix();
-    glUseProgram(waterShaderProgram);
-    glUniformMatrix4fv(waterViewUniform, 1, GL_FALSE, glm::value_ptr(view));
-    glUniform3fv(waterCamUniform, 1, glm::value_ptr(camera.getPosition()));
+    glUseProgram(phongShaderProgram);
+    glUniformMatrix4fv(phongViewUniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniform3fv(phongCamUniform, 1, glm::value_ptr(camera.getPosition()));
 
 
-    glUniform3fv(waterAmbientUniform, 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.5f }));
-    glUniform3fv(waterDiffuseUniform, 1, glm::value_ptr(glm::vec3{ 0.5f, 0.5f, 0.95f }));
-    glUniform3fv(waterSpecularUniform, 1, glm::value_ptr(glm::vec3{ 1.0f, 1.0f, 1.0f }));
-    glUniform1f(waterShininessUniform, 32.0f);
+    glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.5f}));
+    glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.95f}));
+    glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
+    glUniform1f(phongShininessUniform, 32.0f);
 
     // Draw surface mesh
     glBindVertexArray(meshVAO);
@@ -159,10 +159,10 @@ void FluidVisualizer::draw()
     // Draw models
     for (const auto& model : models)
     {
-        glUniform3fv(waterAmbientUniform, 1, glm::value_ptr(model.ambientColor));
-        glUniform3fv(waterDiffuseUniform, 1, glm::value_ptr(model.diffuseColor));
-        glUniform3fv(waterSpecularUniform, 1, glm::value_ptr(model.specularColor));
-        glUniform1f(waterShininessUniform, model.specularExponent);
+        glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(model.ambientColor));
+        glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(model.diffuseColor));
+        glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(model.specularColor));
+        glUniform1f(phongShininessUniform, model.specularExponent);
         glBufferData(GL_ARRAY_BUFFER, model.vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), model.vertexData.data(), GL_STREAM_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)model.vertexData.size());
     }
@@ -183,7 +183,7 @@ void FluidVisualizer::draw()
 
 PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
-    return {
+    return{
         (int)((worldPos.x - gridOffset.x) * voxelVolumeResolutionScale),
         (int)((worldPos.y - gridOffset.y) * voxelVolumeResolutionScale),
         (int)((worldPos.z - gridOffset.z) * voxelVolumeResolutionScale)
@@ -194,7 +194,7 @@ glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxe
 {
     static const float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
 
-    return {
+    return{
         voxelX * invVoxelVolumeResolutionScale + gridOffset.x,
         voxelY * invVoxelVolumeResolutionScale + gridOffset.y,
         voxelZ * invVoxelVolumeResolutionScale + gridOffset.z,

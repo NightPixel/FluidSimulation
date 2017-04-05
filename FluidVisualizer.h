@@ -27,9 +27,9 @@ private:
     GLuint meshVBO, pointsVBO;
     GLuint meshEBO;
     GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
-    GLuint waterVertexShader, waterFragmentShader, waterShaderProgram;
-    GLint simpleViewUniform, waterViewUniform;
-    GLint waterCamUniform, waterAmbientUniform, waterDiffuseUniform, waterSpecularUniform, waterShininessUniform;
+    GLuint phongVertexShader, phongFragmentShader, phongShaderProgram;
+    GLint simpleViewUniform, phongViewUniform;
+    GLint phongCamUniform, phongAmbientUniform, phongDiffuseUniform, phongSpecularUniform, phongShininessUniform;
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
     glm::vec3 voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const;
