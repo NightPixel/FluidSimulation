@@ -64,3 +64,7 @@ struct Model
 
 std::vector<Model> loadOBJFile(const std::string& fileName,
     const glm::vec3& offset = {}, const glm::vec3& rotation = {}, const glm::vec3& scale = glm::vec3{1.0f, 1.0f, 1.0f});
+
+bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize);
+
+bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize);

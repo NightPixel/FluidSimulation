@@ -80,3 +80,82 @@ std::vector<Model> loadOBJFile(const std::string& fileName, const glm::vec3& off
 
     return models;
 }
+
+bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize)
+{
+    // First, we create a new, translated triangle such that the
+    // box we're testing it against is centered around the origin.
+    const Triangle translatedTriangle{
+        triangle.positions[0] - boxCenter,
+        triangle.positions[1] - boxCenter,
+        triangle.positions[2] - boxCenter,
+        triangle.normal
+    };
+
+    // Each triangle's bounding box is described by a (lower corner, upper corner) vector pair.
+    glm::vec3 minCoords, maxCoords;
+    std::tie(minCoords, maxCoords) = translatedTriangle.getBoundingBox();
+
+    // 1. Three tests: triangle AABB against box
+    if (minCoords.x > boxHalfSize.x || maxCoords.x < -boxHalfSize.x ||
+        minCoords.y > boxHalfSize.y || maxCoords.y < -boxHalfSize.y ||
+        minCoords.z > boxHalfSize.z || maxCoords.z < -boxHalfSize.z)
+        return false;
+
+    // 2. One test: triangle plane against box
+    if (!planeBoxIntersection(translatedTriangle.normal, translatedTriangle.positions[0], boxHalfSize))
+        return false;
+
+    // 3. Nine tests: each combination of some global axis crossed with a triangle edge
+    const glm::vec3 axes[3] = {
+        {1.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f}
+    };
+    const glm::vec3 edges[3] = {
+        translatedTriangle.positions[1] - translatedTriangle.positions[0],
+        translatedTriangle.positions[2] - translatedTriangle.positions[1],
+        translatedTriangle.positions[0] - translatedTriangle.positions[2]
+    };
+
+    for (size_t axis = 0; axis != 3; ++axis)
+        for (size_t edge = 0; edge != 3; ++edge)
+        {
+            const glm::vec3 a = glm::cross(axes[axis], edges[edge]);
+            // Project the triangle vertices onto a
+            const float p0 = glm::dot(a, translatedTriangle.positions[0]);
+            const float p1 = glm::dot(a, translatedTriangle.positions[1]);
+            const float p2 = glm::dot(a, translatedTriangle.positions[2]);
+            // Calculate the "radius" of the box projected on a
+            const float r = boxHalfSize.x * abs(a.x) + boxHalfSize.y * abs(a.y) + boxHalfSize.z * abs(a.z);
+            if (std::min({p0, p1, p2}) > r || std::max({p0, p1, p2}) < -r)
+                return false;
+        }
+
+    return true;
+}
+
+bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& maxBox)
+{
+    glm::vec3 vMin, vMax;
+    for (int q = 0; q != 2; ++q)
+    {
+        const float v = vertex[q];
+        if (normal[q] > 0.0f)
+        {
+            vMin[q] = -maxBox[q] - v;
+            vMax[q] =  maxBox[q] - v;
+        }
+        else
+        {
+            vMin[q] =  maxBox[q] - v;
+            vMax[q] = -maxBox[q] - v;
+        }
+    }
+    if (glm::dot(normal, vMin) > 0.0f)
+        return false;
+    if (glm::dot(normal, vMax) >= 0.0f)
+        return true;
+
+    return false;
+}

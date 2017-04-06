@@ -104,8 +104,8 @@ protected:
 
     std::vector<Triangle*> triangleGrid[gridSizeX][gridSizeY][gridSizeZ];
     void fillTriangleGrid();
-    bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize) const;
-    bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize) const;
+
+    glm::ivec3 worldPosToGridIndex(const glm::vec3& pos) const;
 
     struct GridCellNeighborhood
     {
