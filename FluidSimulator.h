@@ -35,7 +35,7 @@ protected:
     static constexpr float maxPosZ =  2.0f;
     glm::vec3 minPos{minPosX, minPosY, minPosZ};
     glm::vec3 maxPos{maxPosX, maxPosY, maxPosZ};
-    glm::vec3 gridOffset = { 0.0f, 0.0f, 0.0f };
+    glm::vec3 sceneOffset = { 0.0f, 0.0f, 0.0f };
 
     glm::vec3 worldBoundsVertices[16] = {
         {minPos.x, minPos.y, minPos.z},

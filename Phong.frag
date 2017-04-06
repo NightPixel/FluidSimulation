@@ -23,7 +23,7 @@ void main()
 {
     vec3 ambient = ambientMaterialColor * ambientLightColor;
 
-    vec3 N = Normal;
+    vec3 N = normalize(Normal);
     vec3 L = normalize(lightPos - WorldPos);
     float diffuseFactor = max(dot(N, L), 0.0);
     vec3 diffuse = diffuseMaterialColor * diffuseFactor * diffuseLightColor;

@@ -48,36 +48,19 @@ void FluidSimulator::update()
     float add = holdShift ? 0.06f : 0.03f;
 
     if (holdForward)
-        gridOffset.z -= add;
+        sceneOffset.z -= add;
     else if (holdBackward)
-        gridOffset.z += add;
+        sceneOffset.z += add;
 
     if (holdRight)
-        gridOffset.x += add;
+        sceneOffset.x += add;
     else if (holdLeft)
-        gridOffset.x -= add;
+        sceneOffset.x -= add;
 
     if (holdUp)
-        gridOffset.y += add;
+        sceneOffset.y += add;
     else if (holdDown)
-        gridOffset.y -= add;
-
-    worldBoundsVertices[0] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[1] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[2] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[3] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[4] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[5] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[6] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[7] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[8] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[9] = { minPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[10] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[11] = { minPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[12] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, minPos.z + gridOffset.z };
-    worldBoundsVertices[13] = { maxPos.x + gridOffset.x, maxPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[14] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, maxPos.z + gridOffset.z };
-    worldBoundsVertices[15] = { maxPos.x + gridOffset.x, minPos.y + gridOffset.y, minPos.z + gridOffset.z };
+        sceneOffset.y -= add;
 
 #ifdef USEPARTICLEGRID
     fillParticleGrid();
@@ -129,14 +112,14 @@ void FluidSimulator::update()
         // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
         for (int dim = 0; dim != 3; ++dim) // Loop over x, y and z components
         {
-            if (r[i][dim] < minPos[dim] + gridOffset[dim])
+            if (r[i][dim] < minPos[dim] + sceneOffset[dim])
             {
-                r[i][dim] = minPos[dim] + gridOffset[dim];
+                r[i][dim] = minPos[dim] + sceneOffset[dim];
                 v[i][dim] = -v[i][dim];
             }
-            else if (r[i][dim] > maxPos[dim] + gridOffset[dim])
+            else if (r[i][dim] > maxPos[dim] + sceneOffset[dim])
             {
-                r[i][dim] = maxPos[dim] + gridOffset[dim];
+                r[i][dim] = maxPos[dim] + sceneOffset[dim];
                 v[i][dim] = -v[i][dim];
             }
         }
@@ -298,9 +281,9 @@ void FluidSimulator::fillParticleGrid()
 
         // Subtract EPSILON to make sure values exactly at grid edge don't lead to incorrect array slot
         particleGrid
-            [clamp(0, gridSizeX - 1, (int)((pos.x - (minPos.x + gridOffset.x) - EPSILON) / h))]
-            [clamp(0, gridSizeY - 1, (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h))]
-            [clamp(0, gridSizeZ - 1, (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h))].push_back(i);
+            [clamp(0, gridSizeX - 1, (int)((pos.x - (minPos.x + sceneOffset.x) - EPSILON) / h))]
+            [clamp(0, gridSizeY - 1, (int)((pos.y - (minPos.y + sceneOffset.y) - EPSILON) / h))]
+            [clamp(0, gridSizeZ - 1, (int)((pos.z - (minPos.z + sceneOffset.z) - EPSILON) / h))].push_back(i);
     }
 }
 
@@ -315,14 +298,14 @@ void FluidSimulator::fillTriangleGrid()
             for (size_t z = 0; z != gridSizeZ; ++z)
             {
                 const glm::vec3 lowerCorner{
-                    x * h + (minPos.x + gridOffset.x),
-                    y * h + (minPos.y + gridOffset.y),
-                    z * h + (minPos.z + gridOffset.z)
+                    x * h + (minPos.x + sceneOffset.x),
+                    y * h + (minPos.y + sceneOffset.y),
+                    z * h + (minPos.z + sceneOffset.z)
                 };
                 const glm::vec3 upperCorner{
-                    (x + 1) * h + (minPos.x + gridOffset.x),
-                    (y + 1) * h + (minPos.y + gridOffset.y),
-                    (z + 1) * h + (minPos.z + gridOffset.z)
+                    (x + 1) * h + (minPos.x + sceneOffset.x),
+                    (y + 1) * h + (minPos.y + sceneOffset.y),
+                    (z + 1) * h + (minPos.z + sceneOffset.z)
                 };
 
                 const glm::vec3 boxCenter = (lowerCorner + upperCorner) / 2.0f;
@@ -343,13 +326,13 @@ void FluidSimulator::fillTriangleGrid()
             const auto bounds = triangle.getBoundingBox();
 
             // Convert the triangle bounding box to grid cells
-            int minGridX = (int)((bounds.first.x - (minPos.x + gridOffset.x) - EPSILON) / h);
-            int minGridY = (int)((bounds.first.y - (minPos.y + gridOffset.y) - EPSILON) / h);
-            int minGridZ = (int)((bounds.first.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+            int minGridX = (int)((bounds.first.x - (minPos.x + sceneOffset.x) - EPSILON) / h);
+            int minGridY = (int)((bounds.first.y - (minPos.y + sceneOffset.y) - EPSILON) / h);
+            int minGridZ = (int)((bounds.first.z - (minPos.z + sceneOffset.z) - EPSILON) / h);
 
-            int maxGridX = (int)((bounds.second.x - (minPos.x + gridOffset.x) - EPSILON) / h);
-            int maxGridY = (int)((bounds.second.y - (minPos.y + gridOffset.y) - EPSILON) / h);
-            int maxGridZ = (int)((bounds.second.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+            int maxGridX = (int)((bounds.second.x - (minPos.x + sceneOffset.x) - EPSILON) / h);
+            int maxGridY = (int)((bounds.second.y - (minPos.y + sceneOffset.y) - EPSILON) / h);
+            int maxGridZ = (int)((bounds.second.z - (minPos.z + sceneOffset.z) - EPSILON) / h);
 
             // For each grid cell that overlaps with the triangle's bounding box...
             for (size_t x = minGridX; x <= maxGridX; ++x)
@@ -452,9 +435,9 @@ bool FluidSimulator::planeBoxIntersection(const glm::vec3& normal, const glm::ve
 
 FluidSimulator::GridCellNeighborhood FluidSimulator::getAdjacentCells(const glm::vec3& pos) const
 {
-    int gridX = (int)((pos.x - (minPos.x + gridOffset.x) - EPSILON) / h);
-    int gridY = (int)((pos.y - (minPos.y + gridOffset.y) - EPSILON) / h);
-    int gridZ = (int)((pos.z - (minPos.z + gridOffset.z) - EPSILON) / h);
+    int gridX = (int)((pos.x - (minPos.x + sceneOffset.x) - EPSILON) / h);
+    int gridY = (int)((pos.y - (minPos.y + sceneOffset.y) - EPSILON) / h);
+    int gridZ = (int)((pos.z - (minPos.z + sceneOffset.z) - EPSILON) / h);
     return {
         std::max(gridX - 1, 0), std::min(gridX + 1, gridSizeX - 1),
         std::max(gridY - 1, 0), std::min(gridY + 1, gridSizeY - 1),

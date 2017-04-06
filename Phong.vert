@@ -11,11 +11,12 @@ out float Material;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
+uniform mat3 normalMat;
 
 void main()
 {
     WorldPos = vec3(model * vec4(position, 1.0));
-    Normal = normal;
+    Normal = normalMat * normal;
     Material = material;
     gl_Position = proj * view * model * vec4(position, 1.0);
 }

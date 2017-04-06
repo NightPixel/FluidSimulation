@@ -23,13 +23,16 @@ public:
     void draw();
 
 private:
-    GLuint meshVAO, pointsVAO;
-    GLuint meshVBO, pointsVBO;
-    GLuint meshEBO;
+    GLuint fluidVAO, pointsVAO, boundsVAO;
+    GLuint fluidVBO, pointsVBO, boundsVBO;
+    GLuint fluidEBO;
     GLuint simpleVertexShader, simpleFragmentShader, simpleShaderProgram;
     GLuint phongVertexShader, phongFragmentShader, phongShaderProgram;
-    GLint simpleViewUniform, phongViewUniform;
-    GLint phongCamUniform, phongAmbientUniform, phongDiffuseUniform, phongSpecularUniform, phongShininessUniform;
+    GLint simpleModelUniform, simpleViewUniform;
+    GLint phongModelUniform, phongViewUniform, phongNormalMatUniform, phongCamUniform, phongAmbientUniform,
+        phongDiffuseUniform, phongSpecularUniform, phongShininessUniform;
+    std::vector<GLuint> modelVAOs;
+    std::vector<GLuint> modelVBOs;
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
     glm::vec3 voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const;

@@ -2,6 +2,7 @@
 #include "OpenGLUtils.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
 
 FluidVisualizer::FluidVisualizer(GLFWwindow* window)
     : FluidSimulator(window),
@@ -27,15 +28,11 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glUseProgram(simpleShaderProgram);
 
     // Set up model, view, projection matrices
-    glUniformMatrix4fv(glGetUniformLocation(simpleShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    simpleModelUniform = glGetUniformLocation(simpleShaderProgram, "model");
     simpleViewUniform = glGetUniformLocation(simpleShaderProgram, "view");
     glUniformMatrix4fv(glGetUniformLocation(simpleShaderProgram, "proj"), 1, GL_FALSE,
         glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
     );
-
-    // Set up fragment shader uniforms
-    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "minWorldPos"), 1, glm::value_ptr(minPos));
-    glUniform3fv(glGetUniformLocation(simpleShaderProgram, "maxWorldPos"), 1, glm::value_ptr(maxPos));
 
     // Create a Vertex Array Object for the particle points
     glGenVertexArrays(1, &pointsVAO);
@@ -47,19 +44,35 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     // Specify the layout of the particle points vertex data
     // glm::vec3 layout:
     //    (x, y, z)-position (3 floats)
-    GLint pointsPosAttrib = glGetAttribLocation(simpleShaderProgram, "position");
-    glEnableVertexAttribArray(pointsPosAttrib);
-    glVertexAttribPointer(pointsPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
+    GLint simpleShaderPosAttrib = glGetAttribLocation(simpleShaderProgram, "position");
+    glEnableVertexAttribArray(simpleShaderPosAttrib);
+    glVertexAttribPointer(simpleShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
+
+    // Create a Vertex Array Object for the world bounds
+    glGenVertexArrays(1, &boundsVAO);
+    glBindVertexArray(boundsVAO);
+    // Create a Vertex Buffer Object for the world bounds
+    glGenBuffers(1, &boundsVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, boundsVBO);
+    // Upload vertex data
+    glBufferData(GL_ARRAY_BUFFER, sizeof(worldBoundsVertices), worldBoundsVertices, GL_STATIC_DRAW);
+
+    // Specify the layout of the world bounds vertex data
+    // glm::vec3 layout:
+    //    (x, y, z)-position (3 floats)
+    glEnableVertexAttribArray(simpleShaderPosAttrib);
+    glVertexAttribPointer(simpleShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
 
     std::tie(phongVertexShader, phongFragmentShader, phongShaderProgram) = createShaderProgram("Phong.vert", "Phong.frag", {{ 0, "outColor" }});
     glUseProgram(phongShaderProgram);
 
-    // Set up model, view, projection matrices
-    glUniformMatrix4fv(glGetUniformLocation(phongShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    // Set up model, view, projection, normal matrices
+    phongModelUniform = glGetUniformLocation(phongShaderProgram, "model");
     phongViewUniform = glGetUniformLocation(phongShaderProgram, "view");
     glUniformMatrix4fv(glGetUniformLocation(phongShaderProgram, "proj"), 1, GL_FALSE,
         glm::value_ptr(glm::perspective(glm::radians(45.0f), (float)windowSizeX / windowSizeY, 1.0f, 25.0f))
     );
+    phongNormalMatUniform = glGetUniformLocation(phongShaderProgram, "normalMat");
 
     // Set up fragment shader uniforms
     phongCamUniform = glGetUniformLocation(phongShaderProgram, "camPos");
@@ -77,29 +90,55 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
 
     // Create a Vertex Array Object for the surface mesh
-    glGenVertexArrays(1, &meshVAO);
-    glBindVertexArray(meshVAO);
+    glGenVertexArrays(1, &fluidVAO);
+    glBindVertexArray(fluidVAO);
     // Create a Vertex Buffer Object for the surface mesh
-    glGenBuffers(1, &meshVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    glGenBuffers(1, &fluidVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
     // Create an Element Buffer Object for the surface mesh
-    glGenBuffers(1, &meshEBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEBO);
+    glGenBuffers(1, &fluidEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fluidEBO);
 
     // Specify the layout of the surface mesh vertex data
     // PolyVox::PositionMaterialNormal layout:
     //    (x, y, z)-position (3 floats)
     //    (x, y, z)-normal   (3 floats)
     //    material           (1 float)
-    GLint meshPosAttrib = glGetAttribLocation(phongShaderProgram, "position");
-    glEnableVertexAttribArray(meshPosAttrib);
-    glVertexAttribPointer(meshPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-    GLint meshNormAttrib = glGetAttribLocation(phongShaderProgram, "normal");
-    glEnableVertexAttribArray(meshNormAttrib);
-    glVertexAttribPointer(meshNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-    GLint meshMatAttrib = glGetAttribLocation(phongShaderProgram, "material");
-    glEnableVertexAttribArray(meshMatAttrib);
-    glVertexAttribPointer(meshMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+    GLint phongShaderPosAttrib = glGetAttribLocation(phongShaderProgram, "position");
+    glEnableVertexAttribArray(phongShaderPosAttrib);
+    glVertexAttribPointer(phongShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+    GLint phongShaderNormAttrib = glGetAttribLocation(phongShaderProgram, "normal");
+    glEnableVertexAttribArray(phongShaderNormAttrib);
+    glVertexAttribPointer(phongShaderNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+    GLint phongShaderMatAttrib = glGetAttribLocation(phongShaderProgram, "material");
+    glEnableVertexAttribArray(phongShaderMatAttrib);
+    glVertexAttribPointer(phongShaderMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+
+    // Create Vertex Array Objects for the models
+    modelVAOs.reserve(models.size());
+    glGenVertexArrays((GLsizei)models.size(), modelVAOs.data());
+    // Create Vertex Buffer Objects for the models
+    modelVBOs.reserve(models.size());
+    glGenBuffers((GLsizei)models.size(), modelVBOs.data());
+    for (size_t i = 0; i != models.size(); ++i)
+    {
+        glBindVertexArray(modelVAOs[i]);
+        glBindBuffer(GL_ARRAY_BUFFER, modelVBOs[i]);
+        // Upload vertex data
+        glBufferData(GL_ARRAY_BUFFER, models[i].vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), models[i].vertexData.data(), GL_STATIC_DRAW);
+
+        // Specify the layout of the model vertex data
+        // PolyVox::PositionMaterialNormal layout:
+        //    (x, y, z)-position (3 floats)
+        //    (x, y, z)-normal   (3 floats)
+        //    material           (1 float)
+        glEnableVertexAttribArray(phongShaderPosAttrib);
+        glVertexAttribPointer(phongShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+        glEnableVertexAttribArray(phongShaderNormAttrib);
+        glVertexAttribPointer(phongShaderNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+        glEnableVertexAttribArray(phongShaderMatAttrib);
+        glVertexAttribPointer(phongShaderMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+    }
 }
 
 FluidVisualizer::~FluidVisualizer()
@@ -111,11 +150,16 @@ FluidVisualizer::~FluidVisualizer()
     glDeleteShader(phongFragmentShader);
     glDeleteShader(phongVertexShader);
 
-    glDeleteBuffers(1, &meshEBO);
-    glDeleteBuffers(1, &meshVBO);
-    glDeleteVertexArrays(1, &meshVAO);
+    glDeleteBuffers(1, &fluidEBO);
+    glDeleteBuffers(1, &fluidVBO);
+    glDeleteVertexArrays(1, &fluidVAO);
     glDeleteBuffers(1, &pointsVBO);
     glDeleteVertexArrays(1, &pointsVAO);
+    glDeleteBuffers(1, &boundsVBO);
+    glDeleteVertexArrays(1, &boundsVAO);
+
+    glDeleteBuffers((GLsizei)modelVBOs.size(), modelVBOs.data());
+    glDeleteVertexArrays((GLsizei)modelVAOs.size(), modelVAOs.data());
 }
 
 // Draws a new frame.
@@ -132,9 +176,9 @@ void FluidVisualizer::draw()
     for (auto& vert : vertices) // Clamp vertex locations to world boundaries
     {
         vert.position.setElements(
-            clamp(minPos.x + gridOffset.x, maxPos.x + gridOffset.x, vert.position.getX() + gridOffset.x),
-            clamp(minPos.y + gridOffset.y, maxPos.y + gridOffset.y, vert.position.getY() + gridOffset.y),
-            clamp(minPos.z + gridOffset.z, maxPos.z + gridOffset.z, vert.position.getZ() + gridOffset.z)
+            clamp(minPos.x + sceneOffset.x, maxPos.x + sceneOffset.x, vert.position.getX() + sceneOffset.x),
+            clamp(minPos.y + sceneOffset.y, maxPos.y + sceneOffset.y, vert.position.getY() + sceneOffset.y),
+            clamp(minPos.z + sceneOffset.z, maxPos.z + sceneOffset.z, vert.position.getZ() + sceneOffset.z)
         );
     }
 
@@ -143,50 +187,57 @@ void FluidVisualizer::draw()
     glUniformMatrix4fv(phongViewUniform, 1, GL_FALSE, glm::value_ptr(view));
     glUniform3fv(phongCamUniform, 1, glm::value_ptr(camera.getPosition()));
 
-
     glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.5f}));
     glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.95f}));
     glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
     glUniform1f(phongShininessUniform, 32.0f);
 
     // Draw surface mesh
-    glBindVertexArray(meshVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    glUniformMatrix4fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    glBindVertexArray(fluidVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
     glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
 
     // Draw models
-    for (const auto& model : models)
+    glm::mat4 modelMatrix = glm::translate(sceneOffset);
+    glm::mat3 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
+    glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    glUniformMatrix3fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+    for (size_t i = 0; i != models.size(); ++i)
     {
-        glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(model.ambientColor));
-        glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(model.diffuseColor));
-        glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(model.specularColor));
-        glUniform1f(phongShininessUniform, model.specularExponent);
-        glBufferData(GL_ARRAY_BUFFER, model.vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), model.vertexData.data(), GL_STREAM_DRAW);
-        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)model.vertexData.size());
+        glBindVertexArray(modelVAOs[i]);
+        glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(models[i].ambientColor));
+        glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(models[i].diffuseColor));
+        glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(models[i].specularColor));
+        glUniform1f(phongShininessUniform, models[i].specularExponent);
+        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)models[i].vertexData.size());
     }
 
     glUseProgram(simpleShaderProgram);
     glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));
 
     // Draw points
+    glUniformMatrix4fv(simpleModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
     glBindVertexArray(pointsVAO);
     glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(r), r, GL_STREAM_DRAW);
     glDrawArrays(GL_POINTS, 0, (GLsizei)std::size(r));
 
     // Draw world bounds
-    glBufferData(GL_ARRAY_BUFFER, sizeof(worldBoundsVertices), worldBoundsVertices, GL_STREAM_DRAW);
+    glUniformMatrix4fv(simpleModelUniform, 1, GL_FALSE, glm::value_ptr(glm::translate(sceneOffset)));
+    glBindVertexArray(boundsVAO);
     glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)std::size(worldBoundsVertices));
 }
 
 PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
     return{
-        (int)((worldPos.x - gridOffset.x) * voxelVolumeResolutionScale),
-        (int)((worldPos.y - gridOffset.y) * voxelVolumeResolutionScale),
-        (int)((worldPos.z - gridOffset.z) * voxelVolumeResolutionScale)
+        (int)((worldPos.x - sceneOffset.x) * voxelVolumeResolutionScale),
+        (int)((worldPos.y - sceneOffset.y) * voxelVolumeResolutionScale),
+        (int)((worldPos.z - sceneOffset.z) * voxelVolumeResolutionScale)
     };
 }
 
@@ -195,9 +246,9 @@ glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxe
     static const float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
 
     return{
-        voxelX * invVoxelVolumeResolutionScale + gridOffset.x,
-        voxelY * invVoxelVolumeResolutionScale + gridOffset.y,
-        voxelZ * invVoxelVolumeResolutionScale + gridOffset.z,
+        voxelX * invVoxelVolumeResolutionScale + sceneOffset.x,
+        voxelY * invVoxelVolumeResolutionScale + sceneOffset.y,
+        voxelZ * invVoxelVolumeResolutionScale + sceneOffset.z,
     };
 }
 
