@@ -19,6 +19,9 @@ public:
     explicit FluidVisualizer(GLFWwindow* window);
     ~FluidVisualizer();
 
+    // Whether or not to execute mesh construction using marching cubes
+    bool meshConstruction = true;
+
     // Draws a new frame.
     void draw();
 

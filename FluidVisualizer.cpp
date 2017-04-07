@@ -20,6 +20,8 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
 }),
 surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
+    TwAddVarRW(antTweakBar, "Construct mesh", TW_TYPE_BOOLCPP, &meshConstruction, "");
+
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
@@ -166,22 +168,6 @@ FluidVisualizer::~FluidVisualizer()
 // Draws a new frame.
 void FluidVisualizer::draw()
 {
-    // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
-    fillVoxelVolume();
-    surfaceExtractor.execute();
-    const auto& lowerCorner = voxelVolume.getEnclosingRegion().getLowerCorner();
-    surfaceMesh.translateVertices({(float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ()});
-    surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
-    const std::vector<uint32_t>& indices = surfaceMesh.getIndices();
-    std::vector<PolyVox::PositionMaterialNormal>& vertices = surfaceMesh.getRawVertexData();
-    for (auto& vert : vertices) // Clamp vertex locations to world boundaries
-    {
-        vert.position.setElements(
-            clamp(minPos.x + sceneOffset.x, maxPos.x + sceneOffset.x, vert.position.getX() + sceneOffset.x),
-            clamp(minPos.y + sceneOffset.y, maxPos.y + sceneOffset.y, vert.position.getY() + sceneOffset.y),
-            clamp(minPos.z + sceneOffset.z, maxPos.z + sceneOffset.z, vert.position.getZ() + sceneOffset.z)
-        );
-    }
 
     const glm::mat4 view = camera.getViewMatrix();
     glUseProgram(phongShaderProgram);
@@ -210,15 +196,34 @@ void FluidVisualizer::draw()
     glUniform1f(phongShininessUniform, 32.0f);
 
     // Draw surface mesh
-    glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
-    glUniformMatrix4fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
-    glUniform1f(phongAlphaUniform, 0.75f);
-    glBindVertexArray(fluidVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
-    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+    if (meshConstruction)
+    {
+        // Run marching cubes using PolyVox, and retrieve the vertex and index buffers
+        fillVoxelVolume();
+        surfaceExtractor.execute();
+        const auto& lowerCorner = voxelVolume.getEnclosingRegion().getLowerCorner();
+        surfaceMesh.translateVertices({ (float)lowerCorner.getX(), (float)lowerCorner.getY(), (float)lowerCorner.getZ() });
+        surfaceMesh.scaleVertices(1.0f / voxelVolumeResolutionScale);
+        const std::vector<uint32_t>& waterMeshIndices = surfaceMesh.getIndices();
+        std::vector<PolyVox::PositionMaterialNormal>& waterMeshVertices = surfaceMesh.getRawVertexData();
+        for (auto& vert : waterMeshVertices) // Clamp vertex locations to world boundaries
+        {
+            vert.position.setElements(
+                clamp(minPos.x + sceneOffset.x, maxPos.x + sceneOffset.x, vert.position.getX() + sceneOffset.x),
+                clamp(minPos.y + sceneOffset.y, maxPos.y + sceneOffset.y, vert.position.getY() + sceneOffset.y),
+                clamp(minPos.z + sceneOffset.z, maxPos.z + sceneOffset.z, vert.position.getZ() + sceneOffset.z)
+            );
+        }
 
+        glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+        glUniformMatrix4fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+        glUniform1f(phongAlphaUniform, 0.75f);
+        glBindVertexArray(fluidVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
+        glBufferData(GL_ARRAY_BUFFER, waterMeshVertices.size() * sizeof(PolyVox::PositionMaterialNormal), waterMeshVertices.data(), GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, waterMeshIndices.size() * sizeof(uint32_t), waterMeshIndices.data(), GL_STREAM_DRAW);
+        glDrawElements(GL_TRIANGLES, (GLsizei)waterMeshIndices.size(), GL_UNSIGNED_INT, nullptr);
+    }
     
 
     glUseProgram(simpleShaderProgram);
