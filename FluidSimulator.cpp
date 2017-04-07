@@ -171,13 +171,18 @@ float FluidSimulator::calcDensity(const glm::vec3& pos) const
 #else
     auto neighborhood = getAdjacentCells(pos);
 
+    __m128 posQF = _mm_loadu_ps(&pos.x);
     float hSq = h * h;
     for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
         for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
             for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                 {
-                    float sqLen = glm::length2(pos - r[j]);
+                    __m128 rQF = _mm_loadu_ps(&r[j].x);
+                    __m128 rMinusPosQF = _mm_sub_ps(posQF, rQF);
+                    __m128 multPosRQF = _mm_mul_ps(rMinusPosQF, rMinusPosQF);
+                    float* multPosRArray = (float*)&multPosRQF;
+                    float sqLen = multPosRArray[0] + multPosRArray[1] + multPosRArray[2];
                     if (sqLen < hSq)
                     {
                         int lookupIndex = (int)(1e4f * sqLen);
