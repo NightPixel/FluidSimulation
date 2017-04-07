@@ -133,7 +133,7 @@ void FluidSimulator::resetParticles()
         for (int y = 0; y != cubeSize; ++y)
             for (int x = 0; x != cubeSize; ++x)
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
-                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2)) + sceneOffset;
+                    glm::vec3(0.2f * (x - cubeSize / 2), 0.2f * (y - cubeSize / 2), 0.2f * (z - cubeSize / 2)) + sceneOffset;
 
     // Copy current positions to previous positions array
     std::copy(std::begin(r), std::end(r), std::begin(rPrev));
@@ -171,21 +171,23 @@ float FluidSimulator::calcDensity(const glm::vec3& pos) const
 #else
     auto neighborhood = getAdjacentCells(pos);
 
+    float hSq = h * h;
     for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
         for (size_t y = neighborhood.minY; y <= neighborhood.maxY; ++y)
             for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                 {
                     float sqLen = glm::length2(pos - r[j]);
-                    if (sqLen < h*h)
+                    if (sqLen < hSq)
                     {
-                        int lookupIndex = (int)(1e4f * glm::length2(pos - r[j]));
-                        rho += m * poly6LookupTable[lookupIndex];
+                        int lookupIndex = (int)(1e4f * sqLen);
+                        rho += poly6LookupTable[lookupIndex];
 
                         // Non-lookup table version:
                         //rho += m * poly6(sqLen, h);
                     }
                 }
+    rho *= m;
 #endif
     return rho;
 }

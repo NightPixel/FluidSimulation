@@ -22,7 +22,7 @@ public:
 protected:
     /* DEBUG */
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
-    static const int cubeSize = 9;
+    static const int cubeSize = 12;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
     /* END DEBUG */
 
@@ -63,7 +63,7 @@ protected:
     // Rest density
     float rho0 = 20.0f;
     // Mass of each particle
-    float m = 1.0f;
+    float m = 0.25f;
     // Fluid viscosity
     float mu = 3.0f;
     // Surface tension coefficient

@@ -10,7 +10,7 @@
 template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
 PolyVox::DefaultMarchingCubesController<float>::getThreshold()
 {
-    return 10.0f;
+    return 5.0f;
 }
 
 class FluidVisualizer : public FluidSimulator
