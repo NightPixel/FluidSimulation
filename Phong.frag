@@ -18,6 +18,7 @@ uniform vec3 diffuseLightColor;
 uniform vec3 specularMaterialColor;
 uniform vec3 specularLightColor;
 uniform float shininess;
+uniform float alpha;
 
 void main()
 {
@@ -33,5 +34,5 @@ void main()
     float specularFactor = pow(max(dot(R, V), 0.0), shininess) * ceil(diffuseFactor);
     vec3 specular = specularMaterialColor * specularFactor * specularLightColor;
 
-    outColor = vec4(ambient + diffuse + specular, 1.0);
+    outColor = vec4(ambient + diffuse + specular, alpha);
 }

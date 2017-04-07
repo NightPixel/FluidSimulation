@@ -81,6 +81,9 @@ int main()
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCharCallback(window, charCallback);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     double previousTime = glfwGetTime();
     while (!glfwWindowShouldClose(window))
     {

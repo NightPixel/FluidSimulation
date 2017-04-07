@@ -30,7 +30,7 @@ private:
     GLuint phongVertexShader, phongFragmentShader, phongShaderProgram;
     GLint simpleModelUniform, simpleViewUniform;
     GLint phongModelUniform, phongViewUniform, phongNormalMatUniform, phongCamUniform, phongAmbientUniform,
-        phongDiffuseUniform, phongSpecularUniform, phongShininessUniform;
+        phongDiffuseUniform, phongSpecularUniform, phongShininessUniform, phongAlphaUniform;
     std::vector<GLuint> modelVAOs;
     std::vector<GLuint> modelVBOs;
 

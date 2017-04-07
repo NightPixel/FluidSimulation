@@ -88,6 +88,7 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glUniform3fv(glGetUniformLocation(phongShaderProgram, "specularLightColor"), 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
 
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
+    phongAlphaUniform = glGetUniformLocation(phongShaderProgram, "alpha");
 
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &fluidVAO);
@@ -187,20 +188,6 @@ void FluidVisualizer::draw()
     glUniformMatrix4fv(phongViewUniform, 1, GL_FALSE, glm::value_ptr(view));
     glUniform3fv(phongCamUniform, 1, glm::value_ptr(camera.getPosition()));
 
-    glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.5f}));
-    glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.95f}));
-    glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
-    glUniform1f(phongShininessUniform, 32.0f);
-
-    // Draw surface mesh
-    glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
-    glUniformMatrix4fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
-    glBindVertexArray(fluidVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
-    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
-
     // Draw models
     glm::mat4 modelMatrix = glm::translate(sceneOffset);
     glm::mat3 normalMatrix = glm::transpose(glm::inverse(modelMatrix));
@@ -213,8 +200,26 @@ void FluidVisualizer::draw()
         glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(models[i].diffuseColor));
         glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(models[i].specularColor));
         glUniform1f(phongShininessUniform, models[i].specularExponent);
+        glUniform1f(phongAlphaUniform, 1.0f);
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)models[i].vertexData.size());
     }
+
+    glUniform3fv(phongAmbientUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.5f}));
+    glUniform3fv(phongDiffuseUniform, 1, glm::value_ptr(glm::vec3{0.5f, 0.5f, 0.95f}));
+    glUniform3fv(phongSpecularUniform, 1, glm::value_ptr(glm::vec3{1.0f, 1.0f, 1.0f}));
+    glUniform1f(phongShininessUniform, 32.0f);
+
+    // Draw surface mesh
+    glUniformMatrix4fv(phongModelUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    glUniformMatrix4fv(phongNormalMatUniform, 1, GL_FALSE, glm::value_ptr(glm::mat4{}));  // Identity matrix
+    glUniform1f(phongAlphaUniform, 0.75f);
+    glBindVertexArray(fluidVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, fluidVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(PolyVox::PositionMaterialNormal), vertices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STREAM_DRAW);
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+
+    
 
     glUseProgram(simpleShaderProgram);
     glUniformMatrix4fv(simpleViewUniform, 1, GL_FALSE, glm::value_ptr(view));
