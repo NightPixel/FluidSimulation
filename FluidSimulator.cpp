@@ -133,7 +133,7 @@ void FluidSimulator::resetParticles()
         for (int y = 0; y != cubeSize; ++y)
             for (int x = 0; x != cubeSize; ++x)
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
-                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2));
+                    glm::vec3(0.3f * (x - cubeSize / 2), 0.3f * (y - cubeSize / 2), 0.3f * (z - cubeSize / 2)) + sceneOffset;
 
     // Copy current positions to previous positions array
     std::copy(std::begin(r), std::end(r), std::begin(rPrev));
