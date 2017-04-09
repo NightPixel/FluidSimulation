@@ -1,4 +1,5 @@
 ﻿#include "Geometry.h"
+#include "Definitions.h"
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include <tiny_obj_loader.h>
 #include <glm/gtx/transform.hpp>
@@ -158,4 +159,52 @@ bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, cons
         return true;
 
     return false;
+}
+
+std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd)
+{
+    // First test whether the line segment intersects with the plane.
+    // If it does, we test whether the intersection point also lies inside the triangle.
+    // Only if that is true we report an intersection.
+    const float planeDenominator = glm::dot(triangle.normal, segmentEnd - segmentStart);
+    if (std::abs(planeDenominator) < EPSILON)
+        return {false, {}}; // The segment is parallel to the plane.
+
+    const float planeNumerator = glm::dot(triangle.normal, triangle.positions[0] - segmentStart);
+
+    // The line segment intersects with the plane at
+    // segmentStart + r * (segmentEnd - segmentStart)
+    const float r = planeNumerator / planeDenominator;
+    if (r < 0.0f)
+        return {false, {}}; // The segment points away from the triangle
+    if (r > 1.0f)
+        return {false, {}}; // The segment ends before hitting the plane
+    // 0 <= r <= 1: the segment hits the plane. Does the intersection point also lie inside the triangle?
+    const glm::vec3 intersection = segmentStart + r * (segmentEnd - segmentStart);
+
+    // Points in the plane can be described by the equation
+    // v(s, t) = v0 + su + tv
+    // where u is one triangle edge pointing away from v0, and v is the other edge.
+    const glm::vec3 u = triangle.positions[1] - triangle.positions[0];
+    const glm::vec3 v = triangle.positions[2] - triangle.positions[0];
+    const glm::vec3 w = intersection - triangle.positions[0]; // w is a vector in the plane
+
+    // Pre-calculate some dot products
+    const float uu = glm::dot(u, u);
+    const float uv = glm::dot(u, v);
+    const float vv = glm::dot(v, v);
+    const float wu = glm::dot(w, u);
+    const float wv = glm::dot(w, v);
+    const float triangleDenominator = uv * uv - uu * vv;
+
+    // The intersection point lies inside the triangle if
+    // s >= 0, t >= 0, and s + t <= 1
+    const float s = (uv * wv - vv * wu) / triangleDenominator;
+    if (s < 0.0f || s > 1.0f)
+        return {false, {}};
+    const float t = (uv * wu - uu * wv) / triangleDenominator;
+    if (t < 0.0f || s + t > 1.0f)
+        return {false, {}};
+
+    return {true, r};
 }

@@ -68,3 +68,5 @@ std::vector<Model> loadOBJFile(const std::string& fileName,
 bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize);
 
 bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize);
+
+std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd);
