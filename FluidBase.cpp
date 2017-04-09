@@ -7,8 +7,9 @@ FluidBase::FluidBase(GLFWwindow* window)
     antTweakBar = TwNewBar("Simulation settings");
     TwDefine("GLOBAL fontsize=3");
 
-    addModelsFromOBJFile("cube.obj", glm::vec3{-1.0f, -1.0f, -1.0f}, glm::vec3{45.0f, 75.0f, 0.0f}, glm::vec3{1.5f, 0.5f, 0.5f});
-    addModelsFromOBJFile("cube.obj", glm::vec3{0.3f, 1.0f, 0.3f}, glm::vec3{-25.0f, -30.0f, 100.0f}, glm::vec3{0.2f, 0.3f, 0.4f});
+    //addModelsFromOBJFile("cube.obj", glm::vec3{-1.0f, -1.0f, -1.0f}, glm::vec3{45.0f, 75.0f, 0.0f}, glm::vec3{1.5f, 0.5f, 0.5f});
+    //addModelsFromOBJFile("cube.obj", glm::vec3{0.3f, 1.0f, 0.3f}, glm::vec3{-25.0f, -30.0f, 100.0f}, glm::vec3{0.2f, 0.3f, 0.4f});
+    addModelsFromOBJFile("cube.obj", glm::vec3{0.0f, -1.75f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
 }
 
 void FluidBase::addModelsFromOBJFile(const std::string& fileName, const glm::vec3& offset, const glm::vec3& rotation, const glm::vec3& scale)

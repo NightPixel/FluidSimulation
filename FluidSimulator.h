@@ -28,7 +28,7 @@ protected:
 
     // All particles reside inside a box with these dimensions
     static constexpr float minPosX = -2.0f;
-    static constexpr float minPosY = -2.0f;
+    static constexpr float minPosY = -3.0f;
     static constexpr float minPosZ = -2.0f;
     static constexpr float maxPosX =  2.0f;
     static constexpr float maxPosY =  2.0f;

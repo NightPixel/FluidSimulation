@@ -357,8 +357,8 @@ void FluidSimulator::fillTriangleGrid()
             const auto bounds = triangle.getBoundingBox();
 
             // Convert the triangle bounding box to grid cells
-            const glm::ivec3 lowerGridPos = worldPosToGridIndex(bounds.first);
-            const glm::ivec3 upperGridPos = worldPosToGridIndex(bounds.second);
+            const glm::ivec3 lowerGridPos = glm::clamp({0, 0, 0}, worldPosToGridIndex(bounds.first), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
+            const glm::ivec3 upperGridPos = glm::clamp({0, 0, 0}, worldPosToGridIndex(bounds.second), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
 
             // For each grid cell that overlaps with the triangle's bounding box...
             for (size_t x = lowerGridPos.x; x <= upperGridPos.x; ++x)
