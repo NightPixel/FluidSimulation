@@ -10,7 +10,7 @@
 template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
 PolyVox::DefaultMarchingCubesController<float>::getThreshold()
 {
-    return 10.0f;
+    return 5.0f;
 }
 
 class FluidVisualizer : public FluidSimulator
@@ -18,6 +18,9 @@ class FluidVisualizer : public FluidSimulator
 public:
     explicit FluidVisualizer(GLFWwindow* window);
     ~FluidVisualizer();
+
+    // Whether or not to execute mesh construction using marching cubes
+    bool meshConstruction = true;
 
     // Draws a new frame.
     void draw();
@@ -30,7 +33,7 @@ private:
     GLuint phongVertexShader, phongFragmentShader, phongShaderProgram;
     GLint simpleModelUniform, simpleViewUniform;
     GLint phongModelUniform, phongViewUniform, phongNormalMatUniform, phongCamUniform, phongAmbientUniform,
-        phongDiffuseUniform, phongSpecularUniform, phongShininessUniform;
+        phongDiffuseUniform, phongSpecularUniform, phongShininessUniform, phongAlphaUniform;
     std::vector<GLuint> modelVAOs;
     std::vector<GLuint> modelVBOs;
 
