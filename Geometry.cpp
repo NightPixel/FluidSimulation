@@ -161,7 +161,7 @@ bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, cons
     return false;
 }
 
-std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd)
+std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd, const glm::vec3& sceneOffset)
 {
     // First test whether the line segment intersects with the plane.
     // If it does, we test whether the intersection point also lies inside the triangle.
@@ -170,7 +170,7 @@ std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle,
     if (std::abs(planeDenominator) < EPSILON)
         return {false, {}}; // The segment is parallel to the plane.
 
-    const float planeNumerator = glm::dot(triangle.normal, triangle.positions[0] - segmentStart);
+    const float planeNumerator = glm::dot(triangle.normal, triangle.positions[0] + sceneOffset - segmentStart);
 
     // The line segment intersects with the plane at
     // segmentStart + r * (segmentEnd - segmentStart)
@@ -187,7 +187,7 @@ std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle,
     // where u is one triangle edge pointing away from v0, and v is the other edge.
     const glm::vec3 u = triangle.positions[1] - triangle.positions[0];
     const glm::vec3 v = triangle.positions[2] - triangle.positions[0];
-    const glm::vec3 w = intersection - triangle.positions[0]; // w is a vector in the plane
+    const glm::vec3 w = intersection - (triangle.positions[0] + sceneOffset); // w is a vector in the plane
 
     // Pre-calculate some dot products
     const float uu = glm::dot(u, u);

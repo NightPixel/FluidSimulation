@@ -269,7 +269,7 @@ void FluidSimulator::handleCollisions(size_t particleId)
 
                 for (Triangle* triangle : trianglesInCell)
                 {
-                    auto intersection = triangleLineSegmentIntersection(*triangle, oldPos, r[particleId]);
+                    auto intersection = triangleLineSegmentIntersection(*triangle, oldPos, r[particleId], sceneOffset);
                     if (!intersection.first)
                         continue; // No collision
 

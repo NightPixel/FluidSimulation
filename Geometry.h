@@ -69,4 +69,4 @@ bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCente
 
 bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize);
 
-std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd);
+std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd, const glm::vec3& sceneOffset);
