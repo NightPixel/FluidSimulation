@@ -28,7 +28,7 @@ protected:
 
     // All particles reside inside a box with these dimensions
     static constexpr float minPosX = -2.0f;
-    static constexpr float minPosY = -2.0f;
+    static constexpr float minPosY = -3.0f;
     static constexpr float minPosZ = -2.0f;
     static constexpr float maxPosX =  2.0f;
     static constexpr float maxPosY =  2.0f;
@@ -73,13 +73,13 @@ protected:
     float csNormThreshold = 1.0f;
     // Gravity acceleration
     glm::vec3 gravity{0.0f, -10.0f, 0.0f};
+    // Coefficient of restitution
+    float cr = 0.0f;
 
     // Particle positions
     glm::vec3 r[particleCount];
     // Particle velocities
     glm::vec3 v[particleCount];
-    // Particle positions in the previous frame
-    glm::vec3 rPrev[particleCount];
 
     float calcDensity(size_t particleId) const;
     float calcDensity(const glm::vec3& pos) const;
@@ -87,6 +87,8 @@ protected:
     glm::vec3 calcPressureForce(size_t particleId, const float* const rho, const float* const p) const;
     glm::vec3 calcViscosityForce(size_t particleId, const float* const rho) const;
     glm::vec3 calcSurfaceForce(size_t particleId, const float* const rho) const;
+
+    void handleCollisions(size_t particleId, glm::vec3 oldPos);
 
     static constexpr int lookupTableSize = (int)(h*h * 1e4f); // e.g. (0.5 * 0.5) * 1e4 = 2500
     float poly6LookupTable[lookupTableSize];

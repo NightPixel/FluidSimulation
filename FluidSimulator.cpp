@@ -7,15 +7,16 @@ FluidSimulator::FluidSimulator(GLFWwindow* window)
     : FluidBase(window)
 {
     //TwAddVarRW(antTweakBar, "h",             TW_TYPE_FLOAT,   &h,               "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "k",             TW_TYPE_FLOAT,   &k,               "min=100      max=3000     step=100    ");
-    TwAddVarRW(antTweakBar, "rho0",          TW_TYPE_FLOAT,   &rho0,            "min=  1      max=  50     step=  1    ");
-    TwAddVarRW(antTweakBar, "m",             TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "mu",            TW_TYPE_FLOAT,   &mu,              "min=  0.1    max=   15    step=  0.1  ");
-    TwAddVarRW(antTweakBar, "sigma",         TW_TYPE_FLOAT,   &sigma,           "min=  0.001  max=   0.05  step=  0.001");
-    TwAddVarRW(antTweakBar, "csNormThresh.", TW_TYPE_FLOAT,   &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "gravityY",      TW_TYPE_FLOAT,   &gravity.y,       "min=-50      max=  -1     step=  1    ");
-    TwAddVarRW(antTweakBar, "dt",            TW_TYPE_FLOAT,   &dt,              "min=  0.001  max=   0.05  step=  0.001");
-    TwAddVarRW(antTweakBar, "Paused",        TW_TYPE_BOOLCPP, &paused,          "");
+    TwAddVarRW(antTweakBar, "k",               TW_TYPE_FLOAT,   &k,               "min=100      max=3000     step=100    ");
+    TwAddVarRW(antTweakBar, "rho0",            TW_TYPE_FLOAT,   &rho0,            "min=  1      max=  50     step=  1    ");
+    TwAddVarRW(antTweakBar, "m",               TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "mu",              TW_TYPE_FLOAT,   &mu,              "min=  0.1    max=   15     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "sigma",           TW_TYPE_FLOAT,   &sigma,           "min=  0.001  max=   0.05  step=  0.001");
+    TwAddVarRW(antTweakBar, "csNormThresh.",   TW_TYPE_FLOAT,   &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "gravityY",        TW_TYPE_FLOAT,   &gravity.y,       "min=-50      max=  -1     step=  1    ");
+    TwAddVarRW(antTweakBar, "restitution cf.", TW_TYPE_FLOAT,   &cr,              "min=  0      max=   1     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "dt",              TW_TYPE_FLOAT,   &dt,              "min=  0.001  max=   0.05  step=  0.001");
+    TwAddVarRW(antTweakBar, "Paused",          TW_TYPE_BOOLCPP, &paused,          "");
     TwAddButton(antTweakBar, "Single step", [](void* clientData)
     {
         FluidSimulator* program = static_cast<FluidSimulator*>(clientData);
@@ -46,28 +47,37 @@ void FluidSimulator::update()
         return;
 
     float add = holdShift ? 0.06f : 0.03f;
+    glm::vec3 sceneMovement = glm::vec3();
 
     if (holdForward)
-        sceneOffset.z -= add;
+        sceneMovement.z -= add;
     else if (holdBackward)
-        sceneOffset.z += add;
+        sceneMovement.z += add;
 
     if (holdRight)
-        sceneOffset.x += add;
+        sceneMovement.x += add;
     else if (holdLeft)
-        sceneOffset.x -= add;
+        sceneMovement.x -= add;
 
     if (holdUp)
-        sceneOffset.y += add;
+        sceneMovement.y += add;
     else if (holdDown)
-        sceneOffset.y -= add;
+        sceneMovement.y -= add;
+
+    if (sceneMovement != glm::vec3())
+    {
+        sceneOffset += sceneMovement;
+        // Handle collisions caused by scenemovement for each water particle
+
+        for (int i = 0; i < particleCount; ++i)
+        {
+            handleCollisions(i, r[i] + sceneMovement);
+        }
+    }
 
 #ifdef USEPARTICLEGRID
     fillParticleGrid();
 #endif
-
-    // Copy current positions to previous positions array
-    std::copy(std::begin(r), std::end(r), std::begin(rPrev));
 
     float rho[particleCount] = {}; // Particle densities
     float p[particleCount] = {}; // Particle pressure
@@ -101,12 +111,12 @@ void FluidSimulator::update()
 #pragma omp parallel for
     for (int i = 0; i < particleCount; ++i)
     {
-        glm::vec3 oldPos = r[i];
-
-        glm::vec3 a = forces[i] / rho[i]; // Acceleration
+        const glm::vec3 a = forces[i] / rho[i]; // Acceleration
         // Semi-implicit Euler integration (TODO: better integration?)
         v[i] += a * dt;
         r[i] += v[i] * dt;
+
+        handleCollisions(i, r[i] - v[i] * dt);
 
         // Rudimentary collision; the particles reside inside a hard-coded AABB
         // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
@@ -135,26 +145,12 @@ void FluidSimulator::resetParticles()
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
                     glm::vec3(0.2f * (x - cubeSize / 2), 0.2f * (y - cubeSize / 2), 0.2f * (z - cubeSize / 2)) + sceneOffset;
 
-    // Copy current positions to previous positions array
-    std::copy(std::begin(r), std::end(r), std::begin(rPrev));
-
     for (auto& vel : v)
         vel = glm::vec3{};
 
 #ifdef USEPARTICLEGRID
     fillParticleGrid();
 #endif
-}
-
-void FluidSimulator::fillKernelLookupTables()
-{
-    // poly6 lookup table
-#pragma omp parallel for
-    for (int i = 0; i < lookupTableSize; ++i)
-    {
-        float squaredDistance = i * 1e-4f;
-        poly6LookupTable[i] = poly6(squaredDistance, h);
-    }
 }
 
 float FluidSimulator::calcDensity(size_t particleId) const
@@ -271,6 +267,66 @@ glm::vec3 FluidSimulator::calcSurfaceForce(size_t particleId, const float* const
      return -sigma * csLaplacian * glm::normalize(n);
 }
 
+void FluidSimulator::handleCollisions(size_t particleId, glm::vec3 oldPos)
+{
+const glm::ivec3 oldGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(oldPos), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
+    const glm::ivec3 newGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(r[particleId]), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
+
+    std::pair<bool, float> closestIntersection(false, std::numeric_limits<float>::max());
+    Triangle* closestIntersectionTriangle = nullptr;
+
+    for (int x = std::min(oldGridIndex.x, newGridIndex.x); x <= std::max(oldGridIndex.x, newGridIndex.x); ++x)
+        for (int y = std::min(oldGridIndex.y, newGridIndex.y); y <= std::max(oldGridIndex.y, newGridIndex.y); ++y)
+            for (int z = std::min(oldGridIndex.z, newGridIndex.z); z <= std::max(oldGridIndex.z, newGridIndex.z); ++z)
+            {
+                std::vector<Triangle*>& trianglesInCell = triangleGrid[x][y][z];
+
+                for (Triangle* triangle : trianglesInCell)
+                {
+                    auto intersection = triangleLineSegmentIntersection(*triangle, oldPos, r[particleId], sceneOffset);
+                    if (!intersection.first)
+                        continue; // No collision
+
+                    if (intersection.second < closestIntersection.second)
+                    {
+                        closestIntersection = intersection;
+                        closestIntersectionTriangle = triangle;
+                    }
+                }
+            }
+
+    if (closestIntersection.first)
+    {
+        // One (or maybe even more) collisions were found: resolve using the closest one
+
+        const glm::vec3 newPos = r[particleId];
+        const glm::vec3 delta = (r[particleId] - oldPos);
+        float deltaNorm = glm::length(delta);
+        // In case of collision with a triangle,
+        // we project the particle back on the triangle...
+        // We project it to be just a little bit outside of the triangle to prevent the particle from ending up "in the face" and not detecting a collision in the next frame
+        r[particleId] = r[particleId] - closestIntersectionTriangle->normal * (glm::dot(r[particleId] - (closestIntersectionTriangle->positions[0] + sceneOffset), closestIntersectionTriangle->normal) - 1e-3f);
+
+        // ... and reflect the velocity vector along the surface normal,
+        // scaled by the coefficient of restitution
+        // and the ratio of penetration depth to the length of the line segment [oldPos, newPos]
+        // v = v - (1 + cR * (d/segment length)) * (v . n) * n
+        const float ratio = closestIntersection.second / glm::length(newPos - oldPos);
+        v[particleId] = v[particleId] - (1.0f + cr * ratio) * glm::dot(v[particleId], closestIntersectionTriangle->normal) * closestIntersectionTriangle->normal;
+    }
+}
+
+void FluidSimulator::fillKernelLookupTables()
+{
+    // poly6 lookup table
+#pragma omp parallel for
+    for (int i = 0; i < lookupTableSize; ++i)
+    {
+        float squaredDistance = i * 1e-4f;
+        poly6LookupTable[i] = poly6(squaredDistance, h);
+    }
+}
+
 void FluidSimulator::fillParticleGrid()
 {
     // Possible TODO: don't use vectors for fast clearing using memset
@@ -300,6 +356,8 @@ void FluidSimulator::fillTriangleGrid()
         for (size_t y = 0; y != gridSizeY; ++y)
             for (size_t z = 0; z != gridSizeZ; ++z)
             {
+                triangleGrid[x][y][z].clear();
+
                 const glm::vec3 lowerCorner{
                     x * h + (minPos.x + sceneOffset.x),
                     y * h + (minPos.y + sceneOffset.y),
@@ -329,8 +387,8 @@ void FluidSimulator::fillTriangleGrid()
             const auto bounds = triangle.getBoundingBox();
 
             // Convert the triangle bounding box to grid cells
-            const glm::ivec3 lowerGridPos = worldPosToGridIndex(bounds.first);
-            const glm::ivec3 upperGridPos = worldPosToGridIndex(bounds.second);
+            const glm::ivec3 lowerGridPos = glm::clamp({0, 0, 0}, worldPosToGridIndex(bounds.first), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
+            const glm::ivec3 upperGridPos = glm::clamp({0, 0, 0}, worldPosToGridIndex(bounds.second), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
 
             // For each grid cell that overlaps with the triangle's bounding box...
             for (size_t x = lowerGridPos.x; x <= upperGridPos.x; ++x)

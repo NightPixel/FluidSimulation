@@ -92,6 +92,11 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
     phongAlphaUniform = glGetUniformLocation(phongShaderProgram, "alpha");
 
+    setupBuffers();
+}
+
+void FluidVisualizer::setupBuffers()
+{
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &fluidVAO);
     glBindVertexArray(fluidVAO);
@@ -118,10 +123,10 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glVertexAttribPointer(phongShaderMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
 
     // Create Vertex Array Objects for the models
-    modelVAOs.reserve(models.size());
+    modelVAOs.resize(models.size());
     glGenVertexArrays((GLsizei)models.size(), modelVAOs.data());
     // Create Vertex Buffer Objects for the models
-    modelVBOs.reserve(models.size());
+    modelVBOs.resize(models.size());
     glGenBuffers((GLsizei)models.size(), modelVBOs.data());
     for (size_t i = 0; i != models.size(); ++i)
     {
@@ -244,7 +249,7 @@ void FluidVisualizer::draw()
 
 PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
-    return{
+    return {
         (int)((worldPos.x - sceneOffset.x) * voxelVolumeResolutionScale),
         (int)((worldPos.y - sceneOffset.y) * voxelVolumeResolutionScale),
         (int)((worldPos.z - sceneOffset.z) * voxelVolumeResolutionScale)
@@ -255,7 +260,7 @@ glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxe
 {
     static const float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
 
-    return{
+    return {
         voxelX * invVoxelVolumeResolutionScale + sceneOffset.x,
         voxelY * invVoxelVolumeResolutionScale + sceneOffset.y,
         voxelZ * invVoxelVolumeResolutionScale + sceneOffset.z,
@@ -273,4 +278,16 @@ void FluidVisualizer::fillVoxelVolume()
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(voxelIndexToWorldPos(x, y, z)));
+}
+
+void FluidVisualizer::loadScene(int sceneNumber)
+{
+    FluidBase::loadScene(sceneNumber);
+    setupBuffers();
+
+    // fillTriangleGrid() assumes that the sceneOffset is 0
+    glm::vec3 sceneOffsetBackup = sceneOffset;
+    sceneOffset = glm::vec3();
+    fillTriangleGrid();
+    sceneOffset = sceneOffsetBackup;
 }
