@@ -291,12 +291,11 @@ void FluidSimulator::handleCollisions(size_t particleId)
         const glm::vec3 newPos = r[particleId];
         const glm::vec3 delta = (r[particleId] - oldPos);
         float deltaNorm = glm::length(delta);
-        // In case of collision with a triangle, we move
-        // the particle back to the intersection point...
-        if (closestIntersection.second * deltaNorm <= 0.01f)
-            r[particleId] = oldPos; // If the intersection depth is very small, don't move particle at all
-        else
-            r[particleId] = oldPos + closestIntersection.second * delta;
+        // In case of collision with a triangle,
+        // we project the particle back on the triangle...
+        // We project it to be just a little bit outside of the triangle to prevent the particle from ending up "in the face" and not detecting a collision in the next frame
+        r[particleId] = r[particleId] - closestIntersectionTriangle->normal * (glm::dot(r[particleId] - (closestIntersectionTriangle->positions[0] + sceneOffset), closestIntersectionTriangle->normal) - 1e-3f);
+
         // ... and reflect the velocity vector along the surface normal,
         // scaled by the coefficient of restitution
         // and the ratio of penetration depth to the length of the line segment [oldPos, newPos]
