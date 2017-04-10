@@ -261,6 +261,9 @@ void FluidSimulator::handleCollisions(size_t particleId)
     const glm::ivec3 oldGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(oldPos), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
     const glm::ivec3 newGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(r[particleId]), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
 
+    std::pair<bool, float> closestIntersection(false, std::numeric_limits<float>::max());
+    Triangle* closestIntersectionTriangle = nullptr;
+
     for (int x = std::min(oldGridIndex.x, newGridIndex.x); x <= std::max(oldGridIndex.x, newGridIndex.x); ++x)
         for (int y = std::min(oldGridIndex.y, newGridIndex.y); y <= std::max(oldGridIndex.y, newGridIndex.y); ++y)
             for (int z = std::min(oldGridIndex.z, newGridIndex.z); z <= std::max(oldGridIndex.z, newGridIndex.z); ++z)
@@ -273,19 +276,34 @@ void FluidSimulator::handleCollisions(size_t particleId)
                     if (!intersection.first)
                         continue; // No collision
 
-                    const glm::vec3 newPos = r[particleId];
-
-                    // In case of collision with a triangle, we move
-                    // the particle back to the intersection point...
-                    r[particleId] = oldPos + intersection.second * (r[particleId] - oldPos);
-                    // ... and reflect the velocity vector along the surface normal,
-                    // scaled by the coefficient of restitution
-                    // and the ratio of penetration depth to the length of the line segment [oldPos, newPos]
-                    // v = v - (1 + cR * (d/segment length)) * (v . n) * n
-                    const float ratio = intersection.second / glm::length(newPos - oldPos);
-                    v[particleId] = v[particleId] - (1.0f + cr * ratio) * glm::dot(v[particleId], triangle->normal) * triangle->normal;
+                    if (intersection.second < closestIntersection.second)
+                    {
+                        closestIntersection = intersection;
+                        closestIntersectionTriangle = triangle;
+                    }
                 }
             }
+
+    if (closestIntersection.first)
+    {
+        // One (or maybe even more) collisions were found: resolve using the closest one
+
+        const glm::vec3 newPos = r[particleId];
+        const glm::vec3 delta = (r[particleId] - oldPos);
+        float deltaNorm = glm::length(delta);
+        // In case of collision with a triangle, we move
+        // the particle back to the intersection point...
+        if (closestIntersection.second * deltaNorm <= 0.01f)
+            r[particleId] = oldPos; // If the intersection depth is very small, don't move particle at all
+        else
+            r[particleId] = oldPos + closestIntersection.second * delta;
+        // ... and reflect the velocity vector along the surface normal,
+        // scaled by the coefficient of restitution
+        // and the ratio of penetration depth to the length of the line segment [oldPos, newPos]
+        // v = v - (1 + cR * (d/segment length)) * (v . n) * n
+        const float ratio = closestIntersection.second / glm::length(newPos - oldPos);
+        v[particleId] = v[particleId] - (1.0f + cr * ratio) * glm::dot(v[particleId], closestIntersectionTriangle->normal) * closestIntersectionTriangle->normal;
+    }
 }
 
 void FluidSimulator::fillKernelLookupTables()
