@@ -345,6 +345,8 @@ void FluidSimulator::fillTriangleGrid()
         for (size_t y = 0; y != gridSizeY; ++y)
             for (size_t z = 0; z != gridSizeZ; ++z)
             {
+                triangleGrid[x][y][z].clear();
+
                 const glm::vec3 lowerCorner{
                     x * h + (minPos.x + sceneOffset.x),
                     y * h + (minPos.y + sceneOffset.y),

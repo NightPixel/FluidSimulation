@@ -52,7 +52,7 @@ std::vector<Model> loadOBJFile(const std::string& fileName, const glm::vec3& off
                 float nx = attrib.normals[3 * idx.normal_index + 0];
                 float ny = attrib.normals[3 * idx.normal_index + 1];
                 float nz = attrib.normals[3 * idx.normal_index + 2];
-                printf("Vertex [%i](%f, %f, %f), Normal [%i](%f, %f, %f)\n", idx.vertex_index, vx, vy, vz, idx.normal_index, nx, ny, nz);
+                //printf("Vertex [%i](%f, %f, %f), Normal [%i](%f, %f, %f)\n", idx.vertex_index, vx, vy, vz, idx.normal_index, nx, ny, nz);
 
                 positions[v] = modelMatrix * glm::vec4{vx, vy, vz, 1.0f};
                 normals[v] = glm::normalize(normalMatrix * glm::vec3{nx, ny, nz});

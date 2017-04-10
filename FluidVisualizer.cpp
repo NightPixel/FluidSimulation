@@ -92,6 +92,11 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
     phongAlphaUniform = glGetUniformLocation(phongShaderProgram, "alpha");
 
+    setupBuffers();
+}
+
+void FluidVisualizer::setupBuffers()
+{
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &fluidVAO);
     glBindVertexArray(fluidVAO);
@@ -273,4 +278,16 @@ void FluidVisualizer::fillVoxelVolume()
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(voxelIndexToWorldPos(x, y, z)));
+}
+
+void FluidVisualizer::loadScene(int sceneNumber)
+{
+    FluidBase::loadScene(sceneNumber);
+    setupBuffers();
+
+    // fillTriangleGrid() assumes that the sceneOffset is 0
+    glm::vec3 sceneOffsetBackup = sceneOffset;
+    sceneOffset = glm::vec3();
+    fillTriangleGrid();
+    sceneOffset = sceneOffsetBackup;
 }

@@ -36,10 +36,13 @@ private:
         phongDiffuseUniform, phongSpecularUniform, phongShininessUniform, phongAlphaUniform;
     std::vector<GLuint> modelVAOs;
     std::vector<GLuint> modelVBOs;
+    void setupBuffers();
 
     PolyVox::Vector3DInt32 worldPosToVoxelIndex(const glm::vec3& worldPos) const;
     glm::vec3 voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const;
     void fillVoxelVolume();
+
+    void loadScene(int sceneNumber);
 
     // World positions will be multiplied by this scale for the purposes of voxel indexing.
     // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).
