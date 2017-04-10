@@ -88,7 +88,7 @@ protected:
     glm::vec3 calcViscosityForce(size_t particleId, const float* const rho) const;
     glm::vec3 calcSurfaceForce(size_t particleId, const float* const rho) const;
 
-    void handleCollisions(size_t particleId);
+    void handleCollisions(size_t particleId, glm::vec3 oldPos);
 
     static constexpr int lookupTableSize = (int)(h*h * 1e4f); // e.g. (0.5 * 0.5) * 1e4 = 2500
     float poly6LookupTable[lookupTableSize];

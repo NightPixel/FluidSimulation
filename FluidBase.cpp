@@ -30,9 +30,16 @@ void FluidBase::loadScene(int sceneNumber)
         addModelsFromOBJFile("cube.obj", glm::vec3{ 0.0f, -1.75f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
         break;
     case 2:
-        addModelsFromOBJFile("cube.obj", glm::vec3{ 0.0f, -1.75f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 90.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
+        addModelsFromOBJFile("cube.obj", glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 90.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
         break;
     case 3:
+        addModelsFromOBJFile("cube.obj", glm::vec3{ -1.5f, -1.75f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
+        break;
+    case 4:
+        addModelsFromOBJFile("cube.obj", glm::vec3{ 1.5f, -1.0f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
+        addModelsFromOBJFile("cube.obj", glm::vec3{ -1.5f, -1.75f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 3.0f, 0.2f, 3.0f });
+        break;
+    case 5:
         addModelsFromOBJFile("lowresbunny.obj", glm::vec3{ 0.0f, -3.3f, 0.0f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.75f, 0.75f, 0.75f });
         break;
     }
@@ -93,7 +100,7 @@ void FluidBase::onKeypress(int key, int action)
         break;
     }
     // Scene selection using F keys
-    if (key >= 290 && key <= 293)
+    if (key >= 290 && key <= 295)
     {
         loadScene(key - 290);
     }

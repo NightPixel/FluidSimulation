@@ -47,21 +47,33 @@ void FluidSimulator::update()
         return;
 
     float add = holdShift ? 0.06f : 0.03f;
+    glm::vec3 sceneMovement = glm::vec3();
 
     if (holdForward)
-        sceneOffset.z -= add;
+        sceneMovement.z -= add;
     else if (holdBackward)
-        sceneOffset.z += add;
+        sceneMovement.z += add;
 
     if (holdRight)
-        sceneOffset.x += add;
+        sceneMovement.x += add;
     else if (holdLeft)
-        sceneOffset.x -= add;
+        sceneMovement.x -= add;
 
     if (holdUp)
-        sceneOffset.y += add;
+        sceneMovement.y += add;
     else if (holdDown)
-        sceneOffset.y -= add;
+        sceneMovement.y -= add;
+
+    if (sceneMovement != glm::vec3())
+    {
+        sceneOffset += sceneMovement;
+        // Handle collisions caused by scenemovement for each water particle
+
+        for (int i = 0; i < particleCount; ++i)
+        {
+            handleCollisions(i, r[i] + sceneMovement);
+        }
+    }
 
 #ifdef USEPARTICLEGRID
     fillParticleGrid();
@@ -104,7 +116,7 @@ void FluidSimulator::update()
         v[i] += a * dt;
         r[i] += v[i] * dt;
 
-        handleCollisions(i);
+        handleCollisions(i, r[i] - v[i] * dt);
 
         // Rudimentary collision; the particles reside inside a hard-coded AABB
         // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
@@ -255,10 +267,9 @@ glm::vec3 FluidSimulator::calcSurfaceForce(size_t particleId, const float* const
      return -sigma * csLaplacian * glm::normalize(n);
 }
 
-void FluidSimulator::handleCollisions(size_t particleId)
+void FluidSimulator::handleCollisions(size_t particleId, glm::vec3 oldPos)
 {
-    const glm::vec3 oldPos = r[particleId] - v[particleId] * dt;
-    const glm::ivec3 oldGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(oldPos), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
+const glm::ivec3 oldGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(oldPos), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
     const glm::ivec3 newGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(r[particleId]), {gridSizeX - 1, gridSizeY - 1, gridSizeZ - 1});
 
     std::pair<bool, float> closestIntersection(false, std::numeric_limits<float>::max());
