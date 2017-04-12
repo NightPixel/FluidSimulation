@@ -43,7 +43,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7FF17C7D-A0EA-4537-83D0-3F10B55894B4}</ProjectGuid>
     <RootNamespace>FluidSimulation</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
