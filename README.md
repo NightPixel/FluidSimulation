@@ -1,5 +1,5 @@
 # FluidSimulation
-This is the fluid simulation we have implemented mini-project of the UU GMT 2016-2017 Game Physics course.
+This is the fluid simulation we have implemented for the mini-project of the UU GMT 2016-2017 Game Physics course.
 The fluid is simulated using Smoothed Particle Hydrodynamics. We have implemented the technique described in the paper *“[Particle-Based Fluid Simulation for Interactive Applications](http://matthias-mueller-fischer.ch/publications/sca03.pdf)”* by Matthias Müller, David Charypar and Markus Gross.
 
 ![Representative screenshot](screenshots/representativescreenshot.png "Representative screenshot")
