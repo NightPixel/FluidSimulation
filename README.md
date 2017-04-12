@@ -2,6 +2,8 @@
 This is the fluid simulation we have implemented mini-project of the UU GMT 2016-2017 Game Physics course.
 The fluid is simulated using Smoothed Particle Hydrodynamics. We have implemented the technique described in the paper *“[Particle-Based Fluid Simulation for Interactive Applications](http://matthias-mueller-fischer.ch/publications/sca03.pdf)”* by Matthias Müller, David Charypar and Markus Gross.
 
+![Representative screenshot](screenshots/representativescreenshot.png "Representative screenshot")
+
 ## Compilation
 All libraries have been included, so the compilation should be _out of the box_. Simply open the Visual Studio 2015 solution in VS2015 and compile for 64-bit. The software was developed on Windows.
 
@@ -15,10 +17,10 @@ During the simulation, the grid in which the fluid resides can be moved around. 
 The program initially launches in an empty scene: no mesh objects are visible. One can change the currently active scene using the function keys:
 
 - F1: Empty scene
-- F2: Scene with a horizontal plane
-- F3: Scene with a vertical plane
-- F4: Scene with a horizontal plane, where fluid can flow downwards past the plane
-- F5: Scene with two horizontal planes where fluid can flow past
+- F2: Scene with a horizontal box
+- F3: Scene with a vertical box
+- F4: Scene with a horizontal box, where fluid can flow downwards past the box
+- F5: Scene with two horizontal boxes where fluid can flow past
 - F6: Scene featuring the Stanford Bunny
 
 Note that when the scene is switched, the fluid is not reset (allowing the user to change the objects in the scene on-the-fly). To reset the particles of the fluid to a cube, press the "Reset particles" button in the AntTweakBar.
@@ -42,3 +44,27 @@ Several simulation parameters can be changed on-the-fly using the AntTweakBar. O
 
 ## Screenshots
 Note that these screenshots are in a 1280 x 1024 resolution, but the software runs at a 1280 x 800 resolution by default (mainly to make it fit on laptop screens with a low resolution). The resolution of the software can be changed in main.cpp.
+
+#### Representative screenshot (scene 6, m = 0.15)
+![Representative screenshot](screenshots/representativescreenshot.png "Representative screenshot")
+
+#### Fluid settling down after motion (scene 1)
+![Screenshot 1](screenshots/screenshot1.png "Screenshot 1")
+
+#### Settled down fluid (scene 1)
+![Screenshot 2](screenshots/screenshot2.png "Screenshot 2")
+
+#### Fluid in heavy motion (scene 1)
+![Screenshot 3](screenshots/screenshot3.png "Screenshot 3")
+
+#### Viscous fluid in motion (scene 1, mu = 15)
+![Screenshot 3](screenshots/screenshot4.png "Screenshot 4")
+
+#### Fluid on a box mesh (scene 2)
+![Screenshot 3](screenshots/screenshot5.png "Screenshot 5")
+
+#### Fluid being separate by box (scene 3)
+![Screenshot 6](screenshots/screenshot6.png "Screenshot 6")
+
+#### Fluid flowing downwards past boxes (scene 5)
+![Screenshot 7](screenshots/screenshot7.png "Screenshot 7")
