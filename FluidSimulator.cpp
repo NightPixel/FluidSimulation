@@ -6,11 +6,10 @@
 FluidSimulator::FluidSimulator(GLFWwindow* window)
     : FluidBase(window)
 {
-    //TwAddVarRW(antTweakBar, "h",             TW_TYPE_FLOAT,   &h,               "min=  0.1    max=   5     step=  0.1  ");
     TwAddVarRW(antTweakBar, "k",               TW_TYPE_FLOAT,   &k,               "min=100      max=3000     step=100    ");
     TwAddVarRW(antTweakBar, "rho0",            TW_TYPE_FLOAT,   &rho0,            "min=  1      max=  50     step=  1    ");
-    TwAddVarRW(antTweakBar, "m",               TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.1  ");
-    TwAddVarRW(antTweakBar, "mu",              TW_TYPE_FLOAT,   &mu,              "min=  0.1    max=   15     step=  0.1  ");
+    TwAddVarRW(antTweakBar, "m",               TW_TYPE_FLOAT,   &m,               "min=  0.1    max=   5     step=  0.05 ");
+    TwAddVarRW(antTweakBar, "mu",              TW_TYPE_FLOAT,   &mu,              "min=  0.1    max=   15     step=  0.1 ");
     TwAddVarRW(antTweakBar, "sigma",           TW_TYPE_FLOAT,   &sigma,           "min=  0.001  max=   0.05  step=  0.001");
     TwAddVarRW(antTweakBar, "csNormThresh.",   TW_TYPE_FLOAT,   &csNormThreshold, "min=  0.1    max=   5     step=  0.1  ");
     TwAddVarRW(antTweakBar, "gravityY",        TW_TYPE_FLOAT,   &gravity.y,       "min=-50      max=  -1     step=  1    ");
@@ -46,6 +45,9 @@ void FluidSimulator::update()
     if (paused)
         return;
 
+    // Player scene movement
+
+    // When shift is held, movement speed is doubled
     float add = holdShift ? 0.06f : 0.03f;
     glm::vec3 sceneMovement = glm::vec3();
 
@@ -68,9 +70,10 @@ void FluidSimulator::update()
     {
         sceneOffset += sceneMovement;
         // Handle collisions caused by scenemovement for each water particle
-
         for (int i = 0; i < particleCount; ++i)
         {
+            // Handle collisions as if the particle went from r[i] + sceneMovement to r[i]: in reality, the particle didn't move but the scene did,
+            // but this corresponds exactly to that
             handleCollisions(i, r[i] + sceneMovement);
         }
     }
@@ -105,20 +108,18 @@ void FluidSimulator::update()
         forces[i] = pressureForce + viscosityForce + surfaceForce + gravityForce;
     }
 
-    // TODO: add external forces (for example, forces created by user input)
-
     // Move each particle
 #pragma omp parallel for
     for (int i = 0; i < particleCount; ++i)
     {
         const glm::vec3 a = forces[i] / rho[i]; // Acceleration
-        // Semi-implicit Euler integration (TODO: better integration?)
+        // Semi-implicit Euler integration
         v[i] += a * dt;
         r[i] += v[i] * dt;
 
         handleCollisions(i, r[i] - v[i] * dt);
 
-        // Rudimentary collision; the particles reside inside a hard-coded AABB
+        // Rudimentary collision with boundaries of the scene; the particles reside inside a hard-coded AABB
         // Upon collision with bounds, push particles out of objects, and reflect their velocity vector
         for (int dim = 0; dim != 3; ++dim) // Loop over x, y and z components
         {
@@ -145,6 +146,7 @@ void FluidSimulator::resetParticles()
                 r[z * cubeSize * cubeSize + y * cubeSize + x] =
                     glm::vec3(0.2f * (x - cubeSize / 2), 0.2f * (y - cubeSize / 2), 0.2f * (z - cubeSize / 2)) + sceneOffset;
 
+    // Reset velocities
     for (auto& vel : v)
         vel = glm::vec3{};
 
@@ -167,6 +169,10 @@ float FluidSimulator::calcDensity(const glm::vec3& pos) const
 #else
     auto neighborhood = getAdjacentCells(pos);
 
+    // Density is calculated every frame for every voxel, so a lot of times when mesh construction is enabled
+    // This function has been optimized extensively
+
+    // Use SIMD intrinsics for the squared length calculation: store QuadFloat for the position we're calculating density for
     __m128 posQF = _mm_loadu_ps(&pos.x);
     float hSq = h * h;
     for (size_t x = neighborhood.minX; x <= neighborhood.maxX; ++x)
@@ -174,13 +180,22 @@ float FluidSimulator::calcDensity(const glm::vec3& pos) const
             for (size_t z = neighborhood.minZ; z <= neighborhood.maxZ; ++z)
                 for (size_t j : particleGrid[x][y][z])
                 {
+                    // Create QuadFloat for particle position r
                     __m128 rQF = _mm_loadu_ps(&r[j].x);
+
+                    // Calculate difference in position
                     __m128 rMinusPosQF = _mm_sub_ps(posQF, rQF);
+
+                    // Multiply each element with itself
                     __m128 multPosRQF = _mm_mul_ps(rMinusPosQF, rMinusPosQF);
+
+                    // Sum the first 3 elements of the QuadFloat to get the squared length
                     float* multPosRArray = (float*)&multPosRQF;
                     float sqLen = multPosRArray[0] + multPosRArray[1] + multPosRArray[2];
+
                     if (sqLen < hSq)
                     {
+                        // Use lookup table version of poly6 kernel, which is much faster than performing the expensive poly6 calculation here
                         int lookupIndex = (int)(1e4f * sqLen);
                         rho += poly6LookupTable[lookupIndex];
 
@@ -329,7 +344,7 @@ void FluidSimulator::fillKernelLookupTables()
 
 void FluidSimulator::fillParticleGrid()
 {
-    // Possible TODO: don't use vectors for fast clearing using memset
+    // Possible performance improvement: don't use vectors for fast clearing using memset
     // However, a fixed size could possibly cost a lot of memory for larger grids
     for (size_t x = 0; x != gridSizeX; ++x)
         for (size_t y = 0; y != gridSizeY; ++y)

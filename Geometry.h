@@ -62,11 +62,15 @@ struct Model
     { }
 };
 
+// Load .obj file, returning the models in there. tinyobjloader is used.
 std::vector<Model> loadOBJFile(const std::string& fileName,
     const glm::vec3& offset = {}, const glm::vec3& rotation = {}, const glm::vec3& scale = glm::vec3{1.0f, 1.0f, 1.0f});
 
+// Returns whether a triangle intersects with a box. The box is specified by its center and half its size.
 bool triangleBoxIntersection(const Triangle& triangle, const glm::vec3& boxCenter, const glm::vec3& boxHalfSize);
 
+// Returns whether a box intersects with a plane. The plane is specified by the normal and a position on the plane (which we call vertex here)
 bool planeBoxIntersection(const glm::vec3& normal, const glm::vec3& vertex, const glm::vec3& boxHalfSize);
 
+// Returns whether a triangle intersects with a line segment. The line segment is specified by the start and end position.
 std::pair<bool, float> triangleLineSegmentIntersection(const Triangle& triangle, const glm::vec3& segmentStart, const glm::vec3& segmentEnd, const glm::vec3& sceneOffset);

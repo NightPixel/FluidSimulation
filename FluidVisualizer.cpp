@@ -20,12 +20,14 @@ FluidVisualizer::FluidVisualizer(GLFWwindow* window)
 }),
 surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
 {
+    // Allow for toggling mesh construction
     TwAddVarRW(antTweakBar, "Construct mesh", TW_TYPE_BOOLCPP, &meshConstruction, "");
 
     // Initialize OpenGL
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
 
+    // Compile vertex and pixel Simple shader
     std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", {{ 0, "outColor" }});
     glUseProgram(simpleShaderProgram);
 
@@ -65,6 +67,7 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glEnableVertexAttribArray(simpleShaderPosAttrib);
     glVertexAttribPointer(simpleShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
 
+    // Compile vertex and pixel Phong shader
     std::tie(phongVertexShader, phongFragmentShader, phongShaderProgram) = createShaderProgram("Phong.vert", "Phong.frag", {{ 0, "outColor" }});
     glUseProgram(phongShaderProgram);
 
@@ -92,10 +95,11 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
     phongAlphaUniform = glGetUniformLocation(phongShaderProgram, "alpha");
 
-    setupBuffers();
+    // Setup buffers for the surface mesh and scene meshes
+    setupMeshBuffers();
 }
 
-void FluidVisualizer::setupBuffers()
+void FluidVisualizer::setupMeshBuffers()
 {
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &fluidVAO);
@@ -247,6 +251,7 @@ void FluidVisualizer::draw()
     glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)std::size(worldBoundsVertices));
 }
 
+// Returns the voxel index of a world position
 PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
     return {
@@ -256,6 +261,7 @@ PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& wo
     };
 }
 
+// Returns the world position of a voxel index
 glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxelZ) const
 {
     static const float invVoxelVolumeResolutionScale = 1.0f / voxelVolumeResolutionScale;
@@ -267,6 +273,8 @@ glm::vec3 FluidVisualizer::voxelIndexToWorldPos(int voxelX, int voxelY, int voxe
     };
 }
 
+// Fills the voxel volume: for each voxel, a density is calculated. If the density is above a certain threshold, the voxel will be considered solid
+// For the threshold, see PolyVox::DefaultMarchingCubesController<float>::getThreshold() at the start of FluidVisualizer.h
 void FluidVisualizer::fillVoxelVolume()
 {
     const PolyVox::Region volumeRegion = voxelVolume.getEnclosingRegion();
@@ -280,10 +288,11 @@ void FluidVisualizer::fillVoxelVolume()
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(voxelIndexToWorldPos(x, y, z)));
 }
 
+// Load a scene with a given scene number. The fluid is not reset when this is done.
 void FluidVisualizer::loadScene(int sceneNumber)
 {
     FluidBase::loadScene(sceneNumber);
-    setupBuffers();
+    setupMeshBuffers();
 
     // fillTriangleGrid() assumes that the sceneOffset is 0
     glm::vec3 sceneOffsetBackup = sceneOffset;

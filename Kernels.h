@@ -11,6 +11,8 @@ inline float poly6(const glm::vec3& rVec, float h)
     return 315 / (64 * pi * pow(h, 9)) * pow(std::max(0.0f, h*h - glm::length2(rVec)), 3);
 }
 
+// Overload of poly6 that takes the squared length of r directly, allowing for the glm::length2 call to be 
+// skipped when the squared length of r is already known
 inline float poly6(const float rSqLen, float h)
 {
     return 315 / (64 * pi * pow(h, 9)) * pow(std::max(0.0f, h*h - rSqLen), 3);

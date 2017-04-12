@@ -20,11 +20,9 @@ public:
     bool paused = true;
 
 protected:
-    /* DEBUG */
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 12;
     static const int particleCount = cubeSize * cubeSize * cubeSize;
-    /* END DEBUG */
 
     // All particles reside inside a box with these dimensions
     static constexpr float minPosX = -2.0f;
@@ -63,7 +61,7 @@ protected:
     // Rest density
     float rho0 = 20.0f;
     // Mass of each particle
-    float m = 0.25f;
+    float m = 0.3f;
     // Fluid viscosity
     float mu = 3.0f;
     // Surface tension coefficient
@@ -81,15 +79,19 @@ protected:
     // Particle velocities
     glm::vec3 v[particleCount];
 
+    // Calculation of density
     float calcDensity(size_t particleId) const;
     float calcDensity(const glm::vec3& pos) const;
 
+    // Calculation of forces
     glm::vec3 calcPressureForce(size_t particleId, const float* const rho, const float* const p) const;
     glm::vec3 calcViscosityForce(size_t particleId, const float* const rho) const;
     glm::vec3 calcSurfaceForce(size_t particleId, const float* const rho) const;
 
+    // Handle collisions for a given particle
     void handleCollisions(size_t particleId, glm::vec3 oldPos);
 
+    // To speed up density calculations a lookup table is used
     static constexpr int lookupTableSize = (int)(h*h * 1e4f); // e.g. (0.5 * 0.5) * 1e4 = 2500
     float poly6LookupTable[lookupTableSize];
 
@@ -97,23 +99,28 @@ protected:
 
     // Particle grid data structure: changes O(n^2) to O(nm): we don't have to
     // check all other particles, but only particles in adjacent grid cells.
-    // Possible TODO: Store entire particle data for better cache usage
+    // It's possible that a speedup could be achieved by storing entire particle data for better cache usage
     static constexpr int gridSizeX = ceiling((maxPosX - minPosX) / h);
     static constexpr int gridSizeY = ceiling((maxPosY - minPosY) / h);
     static constexpr int gridSizeZ = ceiling((maxPosZ - minPosZ) / h);
     std::vector<size_t> particleGrid[gridSizeX][gridSizeY][gridSizeZ];
     void fillParticleGrid();
 
+    // Also use a grid to speed up particle-triangle collision checks
     std::vector<Triangle*> triangleGrid[gridSizeX][gridSizeY][gridSizeZ];
     void fillTriangleGrid();
 
+    // Useful function to convert a world position to a grid index
     glm::ivec3 worldPosToGridIndex(const glm::vec3& pos) const;
 
+    // Used to be able to return a neighborhood of grid cells
     struct GridCellNeighborhood
     {
         int minX, maxX;
         int minY, maxY;
         int minZ, maxZ;
     };
+
+    // Returns the adjacent grid cells to a position
     GridCellNeighborhood getAdjacentCells(const glm::vec3& pos) const;
 };

@@ -6,11 +6,6 @@ FluidBase::FluidBase(GLFWwindow* window)
     glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
     antTweakBar = TwNewBar("Simulation settings");
     TwDefine("GLOBAL fontsize=3");
-
-    //addModelsFromOBJFile("cube.obj", glm::vec3{-1.0f, -1.0f, -1.0f}, glm::vec3{45.0f, 75.0f, 0.0f}, glm::vec3{1.5f, 0.5f, 0.5f});
-    //addModelsFromOBJFile("cube.obj", glm::vec3{0.3f, 1.0f, 0.3f}, glm::vec3{-25.0f, -30.0f, 100.0f}, glm::vec3{0.2f, 0.3f, 0.4f});
-    //addModelsFromOBJFile("cube.obj", glm::vec3{0.0f, -1.75f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
-    //addModelsFromOBJFile("lowresbunny.obj", glm::vec3{0.0f, -3.3f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{0.75f, 0.75f, 0.75f});
 }
 
 void FluidBase::addModelsFromOBJFile(const std::string& fileName, const glm::vec3& offset, const glm::vec3& rotation, const glm::vec3& scale)
@@ -74,7 +69,7 @@ void FluidBase::onMouseScrolled(float yOffset)
 
 void FluidBase::onKeypress(int key, int action)
 {
-    printf("K: %i A: %i\n", key, action);
+    // This will allow for movement of the scene using WASD, Space, LCtrl and LShift
     switch (key)
     {
     case 'W':
