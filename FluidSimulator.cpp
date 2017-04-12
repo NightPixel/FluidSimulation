@@ -308,11 +308,9 @@ const glm::ivec3 oldGridIndex = glm::clamp({0, 0, 0}, worldPosToGridIndex(oldPos
         r[particleId] = r[particleId] - closestIntersectionTriangle->normal * (glm::dot(r[particleId] - (closestIntersectionTriangle->positions[0] + sceneOffset), closestIntersectionTriangle->normal) - 1e-3f);
 
         // ... and reflect the velocity vector along the surface normal,
-        // scaled by the coefficient of restitution
-        // and the ratio of penetration depth to the length of the line segment [oldPos, newPos]
-        // v = v - (1 + cR * (d/segment length)) * (v . n) * n
-        const float ratio = closestIntersection.second / glm::length(newPos - oldPos);
-        v[particleId] = v[particleId] - (1.0f + cr * ratio) * glm::dot(v[particleId], closestIntersectionTriangle->normal) * closestIntersectionTriangle->normal;
+        // scaled by the coefficient of restitution and the penetration depth (between 0 and 1)
+        // v = v - (1 + cR * penetration depth) * (v . n) * n
+        v[particleId] = v[particleId] - (1.0f + cr * closestIntersection.second) * glm::dot(v[particleId], closestIntersectionTriangle->normal) * closestIntersectionTriangle->normal;
     }
 }
 
