@@ -28,7 +28,7 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glPointSize(5.0f);
 
     // Compile vertex and pixel Simple shader
-    std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("Simple.vert", "Simple.frag", {{ 0, "outColor" }});
+    std::tie(simpleVertexShader, simpleFragmentShader, simpleShaderProgram) = createShaderProgram("src/Simple.vert", "src/Simple.frag", {{ 0, "outColor" }});
     glUseProgram(simpleShaderProgram);
 
     // Set up model, view, projection matrices
@@ -68,7 +68,7 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     glVertexAttribPointer(simpleShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void*>(0 * sizeof(float)));
 
     // Compile vertex and pixel Phong shader
-    std::tie(phongVertexShader, phongFragmentShader, phongShaderProgram) = createShaderProgram("Phong.vert", "Phong.frag", {{ 0, "outColor" }});
+    std::tie(phongVertexShader, phongFragmentShader, phongShaderProgram) = createShaderProgram("src/Phong.vert", "src/Phong.frag", {{ 0, "outColor" }});
     glUseProgram(phongShaderProgram);
 
     // Set up model, view, projection, normal matrices

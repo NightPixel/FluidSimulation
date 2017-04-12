@@ -477,7 +477,7 @@ void Program::fillKernelLookupTables()
 #pragma omp parallel for
     for (int i = 0; i < lookupTableSize; ++i)
     {
-        float squaredDistance = i * 1e-4;
+        float squaredDistance = i * 1e-4f;
         poly6LookupTable[i] = poly6(squaredDistance, h);
     }
 }
@@ -504,7 +504,7 @@ float Program::calcDensity(const glm::vec3& pos) const
                     float sqLen = glm::length2(pos - r[j]);
                     if (sqLen < h*h)
                     {
-                        int lookupIndex = 1e4 * glm::length2(pos - r[j]);
+                        int lookupIndex = (int)(1e4f * glm::length2(pos - r[j]));
                         rho += m * poly6LookupTable[lookupIndex]; 
 
                         // Non-lookup table version:

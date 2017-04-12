@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Camera.h"
+#include "Utils.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <AntTweakBar.h>
@@ -21,12 +22,6 @@ template<> inline PolyVox::DefaultMarchingCubesController<float>::DensityType
     PolyVox::DefaultMarchingCubesController<float>::getThreshold()
 {
     return 10.0f;
-}
-
-// A ceiling function that works on compile-time floats.
-constexpr int ceiling(float num)
-{
-    return (float)(int)num == num ? (int)num : (int)num + (num > 0 ? 1 : 0);
 }
 
 struct GridCellNeighborhood
@@ -157,7 +152,7 @@ private:
     glm::vec3 calcViscosityForce(size_t particleId, float* rho);
     glm::vec3 calcSurfaceForce(size_t particleId, float* rho);
 
-    static constexpr int lookupTableSize = h*h * 1e4; // e.g. (0.5 * 0.5) * 1e4 = 2500
+    static constexpr int lookupTableSize = (int)(h*h * 1e4f); // e.g. (0.5 * 0.5) * 1e4 = 2500
 
     float poly6LookupTable[lookupTableSize];
 

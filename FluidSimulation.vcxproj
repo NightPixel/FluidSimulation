@@ -10,10 +10,40 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\FluidBase.cpp" />
+    <ClCompile Include="src\FluidSimulator.cpp" />
+    <ClCompile Include="src\FluidVisualizer.cpp" />
+    <ClCompile Include="src\Geometry.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\OpenGLUtils.cpp" />
+    <ClCompile Include="src\Program.cpp" />
+    <ClCompile Include="src\Randomizer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\Definitions.h" />
+    <ClInclude Include="src\FluidBase.h" />
+    <ClInclude Include="src\FluidSimulator.h" />
+    <ClInclude Include="src\FluidVisualizer.h" />
+    <ClInclude Include="src\Geometry.h" />
+    <ClInclude Include="src\Kernels.h" />
+    <ClInclude Include="src\OpenGLUtils.h" />
+    <ClInclude Include="src\Program.h" />
+    <ClInclude Include="src\Randomizer.h" />
+    <ClInclude Include="src\Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\Phong.frag" />
+    <None Include="src\Phong.vert" />
+    <None Include="src\Simple.frag" />
+    <None Include="src\Simple.vert" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7FF17C7D-A0EA-4537-83D0-3F10B55894B4}</ProjectGuid>
     <RootNamespace>FluidSimulation</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -77,34 +107,6 @@
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Geometry.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="OpenGLUtils.cpp" />
-    <ClCompile Include="FluidSimulator.cpp" />
-    <ClCompile Include="FluidBase.cpp" />
-    <ClCompile Include="FluidVisualizer.cpp" />
-    <ClCompile Include="Randomizer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Simple.frag" />
-    <None Include="Simple.vert" />
-    <None Include="Phong.frag" />
-    <None Include="Phong.vert" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="Definitions.h" />
-    <ClInclude Include="Geometry.h" />
-    <ClInclude Include="Kernels.h" />
-    <ClInclude Include="OpenGLUtils.h" />
-    <ClInclude Include="FluidSimulator.h" />
-    <ClInclude Include="FluidBase.h" />
-    <ClInclude Include="FluidVisualizer.h" />
-    <ClInclude Include="Randomizer.h" />
-    <ClInclude Include="Utils.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
