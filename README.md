@@ -57,13 +57,13 @@ Note that these screenshots are in a 1280 x 1024 resolution, but the software ru
 #### Fluid in heavy motion (scene 1)
 ![Screenshot 3](screenshots/screenshot3.png "Screenshot 3")
 
-#### Viscous fluid in motion (scene 1, mu = 15)
+#### Very viscous fluid in motion (scene 1, mu = 15)
 ![Screenshot 3](screenshots/screenshot4.png "Screenshot 4")
 
 #### Fluid on a box mesh (scene 2)
 ![Screenshot 3](screenshots/screenshot5.png "Screenshot 5")
 
-#### Fluid being separate by box (scene 3)
+#### Fluid being separated by box (scene 3)
 ![Screenshot 6](screenshots/screenshot6.png "Screenshot 6")
 
 #### Fluid flowing downwards past boxes (scene 5)
