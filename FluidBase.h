@@ -15,16 +15,15 @@ public:
     void addModelsFromOBJFile(const std::string& fileName,
         const glm::vec3& offset = {}, const glm::vec3& rotation = {}, const glm::vec3& scale = glm::vec3{1.0f, 1.0f, 1.0f});
 
-    virtual void loadScene(int sceneNumber);
-
     // Called when the mouse cursor is moved.
     void onMouseMoved(float dxPos, float dyPos);
     // Called when the mouse wheel is scrolled.
     void onMouseScrolled(float yOffset);
     // Called when a key is pressed or released.
-    void onKeypress(int key, int action);
+    virtual void onKeypress(int key, int action);
 
 protected:
+    ~FluidBase() = default;
     Camera camera;
     GLFWwindow* window;
     TwBar* antTweakBar;

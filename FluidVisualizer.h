@@ -17,13 +17,15 @@ class FluidVisualizer : public FluidSimulator
 {
 public:
     explicit FluidVisualizer(GLFWwindow* window);
-    ~FluidVisualizer();
+    virtual ~FluidVisualizer();
 
     // Whether or not to execute mesh construction using marching cubes
     bool meshConstruction = true;
 
     // Draws a new frame.
     void draw();
+
+    void onKeypress(int key, int action) override;
 
 private:
     GLuint fluidVAO, pointsVAO, boundsVAO;
@@ -34,8 +36,13 @@ private:
     GLint simpleModelUniform, simpleViewUniform;
     GLint phongModelUniform, phongViewUniform, phongNormalMatUniform, phongCamUniform, phongAmbientUniform,
         phongDiffuseUniform, phongSpecularUniform, phongShininessUniform, phongAlphaUniform;
+    GLint phongPosAttrib, phongNormAttrib, phongMatAttrib;
     std::vector<GLuint> modelVAOs;
     std::vector<GLuint> modelVBOs;
+
+    // Load a scene with a given scene number. The fluid is not reset when this is done.
+    void loadScene(int sceneNumber);
+
     void setupMeshBuffers();
 
     // Returns the voxel index of a world position
@@ -47,9 +54,6 @@ private:
     // Fills the voxel volume: for each voxel, a density is calculated. If the density is above a certain threshold, the voxel will be considered solid
     // For the threshold, see PolyVox::DefaultMarchingCubesController<float>::getThreshold() at the start of FluidVisualizer.h
     void fillVoxelVolume();
-
-    // Load a scene with a given scene number. The fluid is not reset when this is done.
-    void loadScene(int sceneNumber);
 
     // World positions will be multiplied by this scale for the purposes of voxel indexing.
     // Example: if this scale is 10, a world pos of (-1, 0, 2.5) will map to the voxel at (-10, 0, 25).

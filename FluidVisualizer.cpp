@@ -95,12 +95,7 @@ surfaceExtractor(&voxelVolume, voxelVolume.getEnclosingRegion(), &surfaceMesh)
     phongShininessUniform = glGetUniformLocation(phongShaderProgram, "shininess");
     phongAlphaUniform = glGetUniformLocation(phongShaderProgram, "alpha");
 
-    // Setup buffers for the surface mesh and scene meshes
-    setupMeshBuffers();
-}
 
-void FluidVisualizer::setupMeshBuffers()
-{
     // Create a Vertex Array Object for the surface mesh
     glGenVertexArrays(1, &fluidVAO);
     glBindVertexArray(fluidVAO);
@@ -116,41 +111,18 @@ void FluidVisualizer::setupMeshBuffers()
     //    (x, y, z)-position (3 floats)
     //    (x, y, z)-normal   (3 floats)
     //    material           (1 float)
-    GLint phongShaderPosAttrib = glGetAttribLocation(phongShaderProgram, "position");
-    glEnableVertexAttribArray(phongShaderPosAttrib);
-    glVertexAttribPointer(phongShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-    GLint phongShaderNormAttrib = glGetAttribLocation(phongShaderProgram, "normal");
-    glEnableVertexAttribArray(phongShaderNormAttrib);
-    glVertexAttribPointer(phongShaderNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-    GLint phongShaderMatAttrib = glGetAttribLocation(phongShaderProgram, "material");
-    glEnableVertexAttribArray(phongShaderMatAttrib);
-    glVertexAttribPointer(phongShaderMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+    phongPosAttrib = glGetAttribLocation(phongShaderProgram, "position");
+    glEnableVertexAttribArray(phongPosAttrib);
+    glVertexAttribPointer(phongPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+    phongNormAttrib = glGetAttribLocation(phongShaderProgram, "normal");
+    glEnableVertexAttribArray(phongNormAttrib);
+    glVertexAttribPointer(phongNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+    phongMatAttrib = glGetAttribLocation(phongShaderProgram, "material");
+    glEnableVertexAttribArray(phongMatAttrib);
+    glVertexAttribPointer(phongMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
 
-    // Create Vertex Array Objects for the models
-    modelVAOs.resize(models.size());
-    glGenVertexArrays((GLsizei)models.size(), modelVAOs.data());
-    // Create Vertex Buffer Objects for the models
-    modelVBOs.resize(models.size());
-    glGenBuffers((GLsizei)models.size(), modelVBOs.data());
-    for (size_t i = 0; i != models.size(); ++i)
-    {
-        glBindVertexArray(modelVAOs[i]);
-        glBindBuffer(GL_ARRAY_BUFFER, modelVBOs[i]);
-        // Upload vertex data
-        glBufferData(GL_ARRAY_BUFFER, models[i].vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), models[i].vertexData.data(), GL_STATIC_DRAW);
-
-        // Specify the layout of the model vertex data
-        // PolyVox::PositionMaterialNormal layout:
-        //    (x, y, z)-position (3 floats)
-        //    (x, y, z)-normal   (3 floats)
-        //    material           (1 float)
-        glEnableVertexAttribArray(phongShaderPosAttrib);
-        glVertexAttribPointer(phongShaderPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
-        glEnableVertexAttribArray(phongShaderNormAttrib);
-        glVertexAttribPointer(phongShaderNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
-        glEnableVertexAttribArray(phongShaderMatAttrib);
-        glVertexAttribPointer(phongShaderMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
-    }
+    // Setup buffers for the surface mesh and scene meshes
+    setupMeshBuffers();
 }
 
 FluidVisualizer::~FluidVisualizer()
@@ -251,6 +223,83 @@ void FluidVisualizer::draw()
     glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)std::size(worldBoundsVertices));
 }
 
+void FluidVisualizer::onKeypress(int key, int action)
+{
+    FluidBase::onKeypress(key, action);
+
+    // Scene selection using F keys
+    if (key >= 290 && key <= 295)
+    {
+        loadScene(key - 290);
+    }
+}
+
+// Load a scene with a given scene number. The fluid is not reset when this is done.
+void FluidVisualizer::loadScene(int sceneNumber)
+{
+    models.clear();
+    switch (sceneNumber)
+    {
+    case 0:
+        break;
+    case 1:
+        addModelsFromOBJFile("cube.obj", glm::vec3{0.0f, -1.75f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
+        break;
+    case 2:
+        addModelsFromOBJFile("cube.obj", glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{0.0f, 0.0f, 90.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
+        break;
+    case 3:
+        addModelsFromOBJFile("cube.obj", glm::vec3{-1.5f, -1.75f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
+        break;
+    case 4:
+        addModelsFromOBJFile("cube.obj", glm::vec3{1.5f, -1.0f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
+        addModelsFromOBJFile("cube.obj", glm::vec3{-1.5f, -1.75f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{3.0f, 0.2f, 3.0f});
+        break;
+    case 5:
+        addModelsFromOBJFile("lowresbunny.obj", glm::vec3{0.0f, -3.3f, 0.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{0.75f, 0.75f, 0.75f});
+        break;
+    }
+    setupMeshBuffers();
+
+    // fillTriangleGrid() assumes that the sceneOffset is 0
+    glm::vec3 sceneOffsetBackup = sceneOffset;
+    sceneOffset = glm::vec3{};
+    fillTriangleGrid();
+    sceneOffset = sceneOffsetBackup;
+}
+
+void FluidVisualizer::setupMeshBuffers()
+{
+    glDeleteBuffers((GLsizei)modelVBOs.size(), modelVBOs.data());
+    glDeleteVertexArrays((GLsizei)modelVAOs.size(), modelVAOs.data());
+
+    // Create Vertex Array Objects for the models
+    modelVAOs.resize(models.size());
+    glGenVertexArrays((GLsizei)models.size(), modelVAOs.data());
+    // Create Vertex Buffer Objects for the models
+    modelVBOs.resize(models.size());
+    glGenBuffers((GLsizei)models.size(), modelVBOs.data());
+    for (size_t i = 0; i != models.size(); ++i)
+    {
+        glBindVertexArray(modelVAOs[i]);
+        glBindBuffer(GL_ARRAY_BUFFER, modelVBOs[i]);
+        // Upload vertex data
+        glBufferData(GL_ARRAY_BUFFER, models[i].vertexData.size() * sizeof(PolyVox::PositionMaterialNormal), models[i].vertexData.data(), GL_STATIC_DRAW);
+
+        // Specify the layout of the model vertex data
+        // PolyVox::PositionMaterialNormal layout:
+        //    (x, y, z)-position (3 floats)
+        //    (x, y, z)-normal   (3 floats)
+        //    material           (1 float)
+        glEnableVertexAttribArray(phongPosAttrib);
+        glVertexAttribPointer(phongPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(0 * sizeof(float)));
+        glEnableVertexAttribArray(phongNormAttrib);
+        glVertexAttribPointer(phongNormAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(3 * sizeof(float)));
+        glEnableVertexAttribArray(phongMatAttrib);
+        glVertexAttribPointer(phongMatAttrib, 1, GL_FLOAT, GL_FALSE, sizeof(PolyVox::PositionMaterialNormal), reinterpret_cast<void*>(6 * sizeof(float)));
+    }
+}
+
 // Returns the voxel index of a world position
 PolyVox::Vector3DInt32 FluidVisualizer::worldPosToVoxelIndex(const glm::vec3& worldPos) const
 {
@@ -286,17 +335,4 @@ void FluidVisualizer::fillVoxelVolume()
         for (int y = lowerCorner.getY(); y <= upperCorner.getY(); y++)
             for (int x = lowerCorner.getX(); x <= upperCorner.getX(); x++)
                 voxelVolume.setVoxelAt(x, y, z, calcDensity(voxelIndexToWorldPos(x, y, z)));
-}
-
-// Load a scene with a given scene number. The fluid is not reset when this is done.
-void FluidVisualizer::loadScene(int sceneNumber)
-{
-    FluidBase::loadScene(sceneNumber);
-    setupMeshBuffers();
-
-    // fillTriangleGrid() assumes that the sceneOffset is 0
-    glm::vec3 sceneOffsetBackup = sceneOffset;
-    sceneOffset = glm::vec3();
-    fillTriangleGrid();
-    sceneOffset = sceneOffsetBackup;
 }

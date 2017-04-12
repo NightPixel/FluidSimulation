@@ -20,6 +20,7 @@ public:
     bool paused = true;
 
 protected:
+    ~FluidSimulator() = default;
     // The particle positions array ('r'), for now, contains (x, y, z) coordinates for a cube with sides of size cubeSize
     static const int cubeSize = 12;
     static const int particleCount = cubeSize * cubeSize * cubeSize;

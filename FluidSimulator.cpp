@@ -416,7 +416,6 @@ void FluidSimulator::fillTriangleGrid()
                         {
                             // ...store the triangle in that cell.
                             triangleGrid[x][y][z].push_back(&triangle);
-                            printf("(%i, %i, %i) (%i, %i, %i)\n", lowerGridPos.x, lowerGridPos.y, lowerGridPos.z, upperGridPos.x, upperGridPos.y, upperGridPos.z);
                         }
                     }
         }
